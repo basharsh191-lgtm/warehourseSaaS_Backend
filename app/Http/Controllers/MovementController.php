@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Companie;
 use App\Models\Movement;
 use App\Models\MovementItems;
 use App\Models\Operation;
 use App\Models\Product;
-use App\Models\Companie;
+use App\Services\MovementPdfService;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -18,23 +22,21 @@ class MovementController extends Controller
 {
     public function index(Request $request): View
     {
-        $movements = $request->user()->company->movements()
-            ->with('party')
-            ->when($request->filled('type'), fn ($query) => $query->where('type', $request->input('type')))
-            ->when($request->filled('date'), fn ($query) => $query->whereDate('date', $request->input('date')))
-            ->when($request->filled('search'), function ($query) use ($request) {
-                $search = trim($request->string('search')->toString());
-                $query->where(function ($query) use ($search) {
-                    $query->where('number', 'like', "%{$search}%")
-                        ->orWhere('document_no', 'like', "%{$search}%");
-                });
-            })
-            ->latest('date')
-            ->latest('number')
+        $filters = $this->validatedFilters($request);
+        $movements = $this->filteredMovements($request, $filters)
             ->paginate(15)
             ->withQueryString();
+        $parties = $request->user()->company->parties()->orderBy('name')->get(['id', 'name', 'type']);
 
-        return view('movements.index', compact('movements'));
+        return view('movements.index', compact('movements', 'parties'));
+    }
+
+    public function exportPdf(Request $request, MovementPdfService $pdfService): Response
+    {
+        $filters = $this->validatedFilters($request);
+        $movements = $this->filteredMovements($request, $filters)->get();
+
+        return $pdfService->report($movements);
     }
 
     public function create(Request $request): View
@@ -75,6 +77,7 @@ class MovementController extends Controller
         $company = $request->user()->company;
         $validated = $request->validate([
             'type' => ['required', Rule::in(['purchase', 'sale'])],
+            'status' => ['sometimes', Rule::in(['confirmed', 'draft'])],
             'party_id' => [
                 'nullable',
                 Rule::exists('parties', 'id')->where('company_id', $company->id),
@@ -91,6 +94,7 @@ class MovementController extends Controller
             'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999.999'],
             'items.*.price_unit' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
         ]);
+        $validated['status'] = $validated['status'] ?? 'confirmed';
         $validated['party_id'] = $validated['party_id'] ?? null;
         $validated['document_no'] = $validated['document_no'] ?? null;
 
@@ -132,22 +136,8 @@ class MovementController extends Controller
                 throw ValidationException::withMessages(['items' => 'تتضمن الفاتورة مادة غير متاحة.']);
             }
 
-            if ($validated['type'] === 'sale') {
-                $stocks = Operation::query()
-                    ->select('product_id', DB::raw('SUM(in_qty) - SUM(out_qty) as stock'))
-                    ->where('company_id', $company->id)
-                    ->whereIn('product_id', $productIds)
-                    ->groupBy('product_id')
-                    ->pluck('stock', 'product_id');
-                $requested = $items->groupBy('product_id')->map(fn ($lines) => $lines->sum('quantity'));
-
-                foreach ($requested as $productId => $quantity) {
-                    if ($quantity > (float) ($stocks[$productId] ?? 0)) {
-                        throw ValidationException::withMessages([
-                            'items' => "المخزون المتاح من {$products[$productId]->name} غير كافٍ.",
-                        ]);
-                    }
-                }
+            if ($validated['status'] === 'confirmed' && $validated['type'] === 'sale') {
+                $this->ensureSaleStock($company, $items, $products);
             }
 
             $number = $company->movements()->max('number') + 1;
@@ -157,47 +147,33 @@ class MovementController extends Controller
                 'number' => $number,
                 'document_no' => $validated['document_no'] ?: null,
                 'date' => $validated['date'],
-                'status' => 'confirmed',
+                'status' => $validated['status'],
                 'discount' => $discount,
                 'total' => round($subtotal - $discount, 2),
             ]);
 
-            $netRemaining = round($subtotal - $discount, 2);
-            $linesRemaining = $items->count();
-
             foreach ($items as $item) {
-                $movementItem = MovementItems::query()->create([
+                MovementItems::query()->create([
                     'movement_id' => $movement->id,
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'price_unit' => $item['price_unit'],
                     'total_line' => $item['total_line'],
                 ]);
-                $lineNet = --$linesRemaining === 0
-                    ? $netRemaining
-                    : ($subtotal > 0 ? round($item['total_line'] * ($subtotal - $discount) / $subtotal, 2) : 0);
-                $netRemaining = round($netRemaining - $lineNet, 2);
+            }
 
-                Operation::query()->create([
-                    'company_id' => $company->id,
-                    'movement_id' => $movement->id,
-                    'movement_item_id' => $movementItem->id,
-                    'product_id' => $item['product_id'],
-                    'party_id' => $validated['party_id'] ?: null,
-                    'type' => $validated['type'],
-                    'date' => $validated['date'],
-                    'in_qty' => $validated['type'] === 'purchase' ? $item['quantity'] : 0,
-                    'out_qty' => $validated['type'] === 'sale' ? $item['quantity'] : 0,
-                    'price_unit' => $item['price_unit'],
-                    'value' => $item['total_line'],
-                    'value_net' => $lineNet,
-                ]);
+            if ($movement->status === 'confirmed') {
+                $this->recordMovementOperations($company, $movement, $movement->items);
             }
 
             return $movement;
         });
 
-        return redirect()->route('movements.show', $movement)->with('success', 'تم حفظ الفاتورة وتحديث المخزون.');
+        $message = $movement->status === 'draft'
+            ? 'تم حفظ الفاتورة كمسودة دون تحديث المخزون.'
+            : 'تم حفظ الفاتورة وتحديث المخزون.';
+
+        return redirect()->route('movements.show', $movement)->with('success', $message);
     }
 
     public function show(Request $request, int $movement): View
@@ -207,5 +183,168 @@ class MovementController extends Controller
             ->findOrFail($movement);
 
         return view('movements.show', compact('movement'));
+    }
+
+    public function exportInvoicePdf(Request $request, int $movement, MovementPdfService $pdfService): Response
+    {
+        $movement = $request->user()->company->movements()
+            ->with(['party', 'items.product'])
+            ->findOrFail($movement);
+
+        return $pdfService->invoice($movement);
+    }
+
+    public function confirmDraft(Request $request, int $movement): RedirectResponse
+    {
+        $company = $request->user()->company;
+
+        DB::transaction(function () use ($company, $movement) {
+            Companie::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $draft = $company->movements()
+                ->whereKey($movement)
+                ->lockForUpdate()
+                ->with('items')
+                ->firstOrFail();
+
+            if ($draft->status !== 'draft') {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن تأكيد هذه الفاتورة لأنها ليست مسودة.',
+                ]);
+            }
+
+            if ($draft->party_id) {
+                $partyType = $draft->type === 'purchase' ? 'supplier' : 'customer';
+                $party = $company->parties()->find($draft->party_id);
+
+                if (! $party || $party->type !== $partyType) {
+                    throw ValidationException::withMessages([
+                        'party_id' => 'الطرف المرتبط بالمسودة لم يعد متوافقًا مع نوع الفاتورة.',
+                    ]);
+                }
+            }
+
+            $items = $draft->items;
+            $productIds = $items->pluck('product_id')->unique()->values();
+            $products = Product::query()
+                ->whereIn('id', $productIds)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            if ($products->count() !== $productIds->count()) {
+                throw ValidationException::withMessages([
+                    'items' => 'تتضمن المسودة مادة لم تعد متاحة ضمن الشركة.',
+                ]);
+            }
+
+            if ($draft->type === 'sale') {
+                $this->ensureSaleStock($company, $items, $products);
+            }
+
+            $this->recordMovementOperations($company, $draft, $items);
+            $draft->update(['status' => 'confirmed']);
+        });
+
+        return redirect()->route('movements.show', $movement)->with('success', 'تم تأكيد المسودة وتحديث المخزون.');
+    }
+
+    private function validatedFilters(Request $request): array
+    {
+        $companyId = $request->user()->company_id;
+
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'type' => ['nullable', Rule::in(['purchase', 'sale', 'purchase_return', 'sale_return'])],
+            'status' => ['nullable', Rule::in(['confirmed', 'draft', 'cancelled'])],
+            'party_id' => ['nullable', 'integer', Rule::exists('parties', 'id')->where('company_id', $companyId)],
+            'date' => ['nullable', 'date_format:Y-m-d'],
+            'from_date' => ['nullable', 'date_format:Y-m-d'],
+            'to_date' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+
+        if (
+            filled($filters['from_date'] ?? null)
+            && filled($filters['to_date'] ?? null)
+            && $filters['to_date'] < $filters['from_date']
+        ) {
+            throw ValidationException::withMessages([
+                'to_date' => 'يجب أن يكون تاريخ النهاية مساويًا لتاريخ البداية أو بعده.',
+            ]);
+        }
+
+        return $filters;
+    }
+
+    private function filteredMovements(Request $request, array $filters): HasMany
+    {
+        return $request->user()->company->movements()
+            ->with('party')
+            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
+            ->when($filters['date'] ?? null, fn ($query, $date) => $query->whereDate('date', $date))
+            ->when($filters['from_date'] ?? null, fn ($query, $date) => $query->whereDate('date', '>=', $date))
+            ->when($filters['to_date'] ?? null, fn ($query, $date) => $query->whereDate('date', '<=', $date))
+            ->when(
+                isset($filters['search']) && $filters['search'] !== '',
+                function ($query) use ($filters) {
+                    $search = trim($filters['search']);
+                    $query->where(function ($query) use ($search) {
+                        $query->where('number', 'like', "%{$search}%")
+                            ->orWhere('document_no', 'like', "%{$search}%");
+                    });
+                }
+            )
+            ->latest('date')
+            ->latest('number');
+    }
+
+    private function ensureSaleStock(Companie $company, Collection $items, Collection $products): void
+    {
+        $productIds = $items->pluck('product_id')->unique()->values();
+        $stocks = Operation::query()
+            ->select('product_id', DB::raw('SUM(in_qty) - SUM(out_qty) as stock'))
+            ->where('company_id', $company->id)
+            ->whereIn('product_id', $productIds)
+            ->groupBy('product_id')
+            ->pluck('stock', 'product_id');
+        $requested = $items->groupBy('product_id')->map(fn ($lines) => $lines->sum('quantity'));
+
+        foreach ($requested as $productId => $quantity) {
+            if ($quantity > (float) ($stocks[$productId] ?? 0)) {
+                throw ValidationException::withMessages([
+                    'items' => "المخزون المتاح من {$products[$productId]->name} غير كافٍ.",
+                ]);
+            }
+        }
+    }
+
+    private function recordMovementOperations(Companie $company, Movement $movement, Collection $items): void
+    {
+        $subtotal = round($items->sum('total_line'), 2);
+        $netRemaining = (float) $movement->total;
+        $linesRemaining = $items->count();
+
+        foreach ($items as $item) {
+            $lineNet = --$linesRemaining === 0
+                ? $netRemaining
+                : ($subtotal > 0 ? round((float) $item->total_line * (float) $movement->total / $subtotal, 2) : 0);
+            $netRemaining = round($netRemaining - $lineNet, 2);
+
+            Operation::query()->create([
+                'company_id' => $company->id,
+                'movement_id' => $movement->id,
+                'movement_item_id' => $item->id,
+                'product_id' => $item->product_id,
+                'party_id' => $movement->party_id,
+                'type' => $movement->type,
+                'date' => $movement->date,
+                'in_qty' => $movement->type === 'purchase' ? $item->quantity : 0,
+                'out_qty' => $movement->type === 'sale' ? $item->quantity : 0,
+                'price_unit' => $item->price_unit,
+                'value' => $item->total_line,
+                'value_net' => $lineNet,
+            ]);
+        }
     }
 }

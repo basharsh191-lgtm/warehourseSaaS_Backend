@@ -17,7 +17,7 @@ return new class extends Migration
             $table->enum('type', ['purchase', 'sale', 'purchase_return', 'sale_return']);
             $table->unsignedInteger('number');
             $table->string('no_document')->nullable();
-            $table->enum('status', ['confirmed', 'cancelled'])->default('confirmed');
+            $table->enum('status', ['confirmed', 'draft', 'cancelled'])->default('confirmed');
             $table->timestamps();
         });
     }

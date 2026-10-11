@@ -19,6 +19,7 @@ return new class extends Migration
             $table->enum('type', ['customer', 'supplier']);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->unique(['company_id', 'type', 'phone']);
         });
     }
 

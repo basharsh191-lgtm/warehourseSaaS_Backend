@@ -3,43 +3,29 @@
     $companyName = $isSuperAdmin
         ? config('app.name')
         : (auth()->user()?->company?->name ?? 'اسم الشركة');
+    $companyLogo = $isSuperAdmin ? null : auth()->user()?->company?->logo_path;
 @endphp
 
 <aside
-    class="sticky top-0 z-40 flex h-screen w-[256px] min-w-[256px] shrink-0 flex-col justify-between border-l border-slate-200 bg-white/95 px-4 pb-6 pt-[1rem] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/95"
+    :class="{ 'is-open': mobileNavOpen }"
+    class="app-sidebar fixed inset-y-0 right-0 z-50 flex h-screen w-[min(88vw,288px)] shrink-0 flex-col justify-between border-l border-slate-200 bg-white px-4 pb-5 pt-5 shadow-2xl shadow-slate-950/10 transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-40 lg:h-screen lg:w-[256px] lg:min-w-[256px] lg:shadow-none dark:border-slate-800 dark:bg-slate-900"
 >
     {{-- الشعار --}}
     <div class="flex flex-col">
 
         <a
             href="{{ $isSuperAdmin ? route('admin.dashboard') : route('dashboard') }}"
-            class="mb-0 flex items-center gap-3 border-b border-slate-200 px-2 pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800"
+            class="mb-5 flex items-center gap-3 border-b border-slate-200 px-2 pb-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800"
         >
-            <span
-                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/20"
-            >
-                <svg
-                    class="h-6 w-6"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    aria-hidden="true"
-                >
-                    <path
-                        d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        stroke-linejoin="round"
-                    />
-
-                    <path
-                        d="m8 10.75 4 2.25 4-2.25M12 13v4"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    />
-                </svg>
-            </span>
+            @if ($companyLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($companyLogo))
+<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($companyLogo) }}" alt="شعار {{ $companyName }}" class="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-800">            @else
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-900/20">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+                        <path d="m8 10.75 4 2.25 4-2.25M12 13v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </span>
+            @endif
 
             <span class="min-w-0">
                 <span title="{{ $companyName }}" class="block truncate text-sm font-bold text-slate-900 dark:text-white">
@@ -56,15 +42,15 @@
         @unless ($isSuperAdmin)
             <nav
                 aria-label="التنقل الرئيسي"
-                class="flex flex-col gap-3"
+                class="flex max-h-[calc(100vh-190px)] flex-col gap-1.5 overflow-y-auto pe-1"
             >
 
                 {{-- الرئيسية --}}
                 <a
                     href="{{ route('dashboard') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('dashboard'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('dashboard'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('dashboard'),
                     ])
                 >
@@ -85,8 +71,8 @@
                 <a
                     href="{{ route('categories.index') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('categories.*'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('categories.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('categories.*'),
                     ])
                 >
@@ -110,8 +96,8 @@
                 <a
                     href="{{ route('products.index') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('products.*'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('products.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('products.*'),
                     ])
                 >
@@ -132,8 +118,8 @@
                 <a
                     href="{{ route('parties.index') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('parties.*'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('parties.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('parties.*'),
                     ])
                 >
@@ -157,8 +143,8 @@
                 <a
                     href="{{ route('movements.index') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('movements.*'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('movements.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('movements.*'),
                     ])
                 >
@@ -178,13 +164,13 @@
                     <span>الفواتير</span>
                 </a>
 
-                {{-- التسعير --}}
+                {{-- الإعدادات --}}
                 <a
-                    href="{{ route('settings.pricing.edit') }}"
+                    href="{{ route('settings.index') }}"
                     @class([
-                        'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-500/10 text-emerald-700 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-emerald-600 before:[inset-inline-start:0] dark:text-emerald-300 dark:before:bg-emerald-400' => request()->routeIs('settings.pricing.*'),
-                        'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('settings.pricing.*'),
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('settings.*'),
+                        'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('settings.*'),
                     ])
                 >
                     <svg
@@ -194,14 +180,11 @@
                         stroke="currentColor"
                         stroke-width="1.8"
                     >
-                        <circle cx="12" cy="12" r="3"/>
-
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
-                        />
+                        <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"/>
+                        <path d="m19.4 15 .1.1a1.8 1.8 0 1 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 1 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 1 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 1 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 1 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 1 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 1 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 1 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"/>
                     </svg>
 
-                    <span>التسعير</span>
+                    <span>الإعدادات</span>
                 </a>
 
             </nav>

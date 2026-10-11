@@ -10,7 +10,10 @@ class PricingSettingController extends Controller
 {
     public function edit(Request $request): View
     {
-        return view('settings.pricing', ['company' => $request->user()->company]);
+        return view('settings.index', [
+            'company' => $request->user()->company,
+            'activeTab' => 'pricing',
+        ]);
     }
 
     public function update(Request $request): RedirectResponse

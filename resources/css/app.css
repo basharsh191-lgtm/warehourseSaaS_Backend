@@ -12,6 +12,143 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Noto Sans Arabic', 'Noto Kufi Arabic', 'Segoe UI', Tahoma, ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --color-emerald-50: var(--color-indigo-50);
+    --color-emerald-100: var(--color-indigo-100);
+    --color-emerald-200: var(--color-indigo-200);
+    --color-emerald-300: var(--color-indigo-300);
+    --color-emerald-400: var(--color-indigo-400);
+    --color-emerald-500: var(--color-indigo-500);
+    --color-emerald-600: var(--color-indigo-600);
+    --color-emerald-700: var(--color-indigo-700);
+    --color-emerald-800: var(--color-indigo-800);
+    --color-emerald-900: var(--color-indigo-900);
+    --color-emerald-950: var(--color-indigo-950);
+}
+
+@layer base {
+    :root {
+        color-scheme: light;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    :root.dark {
+        color-scheme: dark;
+    }
+
+    body {
+        min-width: 320px;
+        font-feature-settings: 'kern';
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+        font: inherit;
+    }
+
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+        outline: 2px solid rgb(79 70 229 / 75%);
+        outline-offset: 2px;
+    }
+
+    :where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+        transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+    }
+
+    ::selection {
+        color: #312e81;
+        background: rgb(199 210 254 / 65%);
+    }
+
+    .dark ::selection {
+        color: #eef2ff;
+        background: rgb(99 102 241 / 42%);
+    }
+}
+
+@layer components {
+    .app-sidebar-link {
+        transition: color 160ms ease, background-color 160ms ease, transform 160ms ease;
+    }
+
+    .app-card {
+        border-color: rgb(226 232 240 / 90%);
+        background-color: rgb(255 255 255 / 94%);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 12px 28px -24px rgb(15 23 42 / 28%);
+    }
+
+    .dark .app-card {
+        border-color: rgb(51 65 85 / 75%);
+        background-color: rgb(17 27 45 / 94%);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 20%), 0 18px 32px -28px rgb(0 0 0 / 65%);
+    }
+
+    .app-table thead {
+        background-color: rgb(248 250 252 / 90%);
+    }
+
+    .dark .app-table thead {
+        background-color: rgb(15 23 42 / 74%);
+    }
+
+    .app-table tbody tr {
+        transition: background-color 140ms ease;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+@media (max-width: 1023px) {
+    .app-sidebar {
+        transform: translateX(100%);
+    }
+
+    .app-sidebar.is-open {
+        transform: translateX(0);
+    }
+}
+
+main [class*='rounded-2xl'][class*='border'][class*='bg-white'],
+main [class*='rounded-3xl'][class*='border'][class*='bg-white'] {
+    border-color: rgb(226 232 240 / 90%);
+    background-color: rgb(255 255 255 / 94%);
+    box-shadow: 0 1px 2px rgb(15 23 42 / 4%), 0 12px 28px -24px rgb(15 23 42 / 28%);
+}
+
+.dark main [class*='rounded-2xl'][class*='border'][class*='bg-white'],
+.dark main [class*='rounded-3xl'][class*='border'][class*='bg-white'] {
+    border-color: rgb(51 65 85 / 75%);
+    background-color: rgb(17 27 45 / 94%);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 20%), 0 18px 32px -28px rgb(0 0 0 / 65%);
+}
+
+main button:not(:disabled) {
+    transition: transform 150ms ease, box-shadow 150ms ease, background-color 150ms ease, border-color 150ms ease;
+}
+
+main button:not(:disabled):hover {
+    transform: translateY(-1px);
 }

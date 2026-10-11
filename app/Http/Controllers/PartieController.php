@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PartieRequest;
 use App\Models\Partie;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class PartieController extends Controller
@@ -29,17 +29,17 @@ class PartieController extends Controller
         return view('parties.index', compact('parties'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(PartieRequest $request): RedirectResponse
     {
-        $request->user()->company->parties()->create($this->validatedParty($request));
+        $request->user()->company->parties()->create($request->validated());
 
         return redirect()->route('parties.index')->with('success', 'تمت إضافة الطرف بنجاح.');
     }
 
-    public function update(Request $request, int $party): RedirectResponse
+    public function update(PartieRequest $request, int $party): RedirectResponse
     {
         $party = $request->user()->company->parties()->findOrFail($party);
-        $party->update($this->validatedParty($request));
+        $party->update($request->validated());
 
         return redirect()->route('parties.index')->with('success', 'تم تحديث بيانات الطرف.');
     }
@@ -50,14 +50,5 @@ class PartieController extends Controller
         $party->update(['is_active' => ! $party->is_active]);
 
         return redirect()->route('parties.index')->with('success', 'تم تحديث حالة الطرف.');
-    }
-
-    private function validatedParty(Request $request): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', Rule::in(['customer', 'supplier'])],
-        ]);
     }
 }

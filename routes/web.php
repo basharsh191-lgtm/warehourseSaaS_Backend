@@ -2,10 +2,11 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CompanySettingsController;
 use App\Http\Controllers\MovementController;
 use App\Http\Controllers\PartieController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PricingSettingController;
+use App\Http\Controllers\ProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -64,11 +65,16 @@ Route::middleware(['auth', 'subscription', 'company.admin'])->group(function () 
     Route::put('/parties/{party}', [PartieController::class, 'update'])->name('parties.update');
     Route::patch('/parties/{party}/toggle-status', [PartieController::class, 'toggleStatus'])->name('parties.toggle-status');
 
+    Route::get('/settings', [CompanySettingsController::class, 'index'])->name('settings.index');
+    Route::put('/settings/company', [CompanySettingsController::class, 'update'])->name('settings.company.update');
     Route::get('/settings/pricing', [PricingSettingController::class, 'edit'])->name('settings.pricing.edit');
     Route::put('/settings/pricing', [PricingSettingController::class, 'update'])->name('settings.pricing.update');
 
     Route::get('/movements', [MovementController::class, 'index'])->name('movements.index');
     Route::get('/movements/create', [MovementController::class, 'create'])->name('movements.create');
     Route::post('/movements', [MovementController::class, 'store'])->name('movements.store');
+    Route::get('/movements/export/pdf', [MovementController::class, 'exportPdf'])->name('movements.export.pdf');
+    Route::get('/movements/{movement}/pdf', [MovementController::class, 'exportInvoicePdf'])->name('movements.pdf');
+    Route::post('/movements/{movement}/confirm', [MovementController::class, 'confirmDraft'])->name('movements.confirm');
     Route::get('/movements/{movement}', [MovementController::class, 'show'])->name('movements.show');
 });

@@ -1,12 +1,16 @@
 <?php
 
 use App\Models\Companie;
+use App\Models\Movement;
 use App\Models\Operation;
 use App\Models\Partie;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -52,6 +56,47 @@ test('parties can be created, edited, and deactivated without deletion', functio
         ->and($party->fresh()->is_active)->toBeFalse();
 });
 
+test('party phone numbers are unique per type and can be retained on update', function () {
+    $customer = Partie::create([
+        'company_id' => $this->company->id,
+        'name' => 'العميل الأول',
+        'phone' => '0501111111',
+        'type' => 'customer',
+        'is_active' => true,
+    ]);
+
+    $this->from(route('parties.index'))
+        ->post(route('parties.store'), [
+            'name' => 'عميل آخر',
+            'phone' => '0501111111',
+            'type' => 'customer',
+        ])
+        ->assertRedirect(route('parties.index'))
+        ->assertSessionHasErrors([
+            'phone' => 'رقم الهاتف هذا مستخدم بالفعل لطرف آخر',
+        ]);
+
+    $this->put(route('parties.update', $customer), [
+        'name' => 'العميل الأول',
+        'phone' => '0501111111',
+        'type' => 'customer',
+    ])->assertRedirectToRoute('parties.index');
+
+    $this->post(route('parties.store'), [
+        'name' => 'المورد الأول',
+        'phone' => '0501111111',
+        'type' => 'supplier',
+    ])->assertRedirectToRoute('parties.index');
+
+    expect(fn () => Partie::create([
+        'company_id' => $this->company->id,
+        'name' => 'عميل مكرر من قاعدة البيانات',
+        'phone' => '0501111111',
+        'type' => 'customer',
+        'is_active' => true,
+    ]))->toThrow(QueryException::class);
+});
+
 test('pricing markup is validated and saved for the current company', function () {
     $this->get(route('settings.pricing.edit'))->assertOk()->assertSee('name="percent_markup"', false);
 
@@ -64,6 +109,37 @@ test('pricing markup is validated and saved for the current company', function (
         ->put(route('settings.pricing.update'), ['percent_markup' => '-1'])
         ->assertRedirect(route('settings.pricing.edit'))
         ->assertSessionHasErrors('percent_markup');
+});
+
+test('company settings update contact details and store a company logo', function () {
+    Storage::fake('public');
+
+    $this->get(route('settings.index', ['tab' => 'company']))
+        ->assertOk()
+        ->assertSee('بيانات الشركة')
+        ->assertSee('name="logo"', false);
+
+    $logo = UploadedFile::fake()->createWithContent(
+        'company-logo.png',
+        base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC')
+    );
+
+    $this->put(route('settings.company.update', ['tab' => 'company']), [
+        'name' => 'شركة محدثة',
+        'phone' => '0501234567',
+        'email' => 'office@example.com',
+        'address' => 'الرياض، المملكة العربية السعودية',
+        'logo' => $logo,
+    ])->assertRedirect(route('settings.index', ['tab' => 'company']));
+
+    $company = $this->company->fresh();
+    expect($company->name)->toBe('شركة محدثة')
+        ->and($company->phone)->toBe('0501234567')
+        ->and($company->email)->toBe('office@example.com')
+        ->and($company->address)->toBe('الرياض، المملكة العربية السعودية')
+        ->and($company->logo_path)->not->toBeNull();
+
+    Storage::disk('public')->assertExists($company->logo_path);
 });
 
 test('purchase invoices increase stock and sale invoices cannot exceed available stock', function () {
@@ -130,4 +206,122 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
         ->assertSessionHasErrors('items');
 
     expect((float) Operation::query()->sum('in_qty') - (float) Operation::query()->sum('out_qty'))->toBe(1.25);
+});
+
+test('draft invoices do not change stock until confirmed', function () {
+    $product = Product::create([
+        'company_id' => $this->company->id,
+        'name' => 'مخزون المسودات',
+        'barcode' => 'DRAFT-01',
+        'unit' => 'قطعة',
+        'price_sale_custom' => null,
+        'is_active' => true,
+    ]);
+
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'date' => now()->toDateString(),
+        'discount' => 0,
+        'items' => [['product_id' => $product->id, 'quantity' => 2, 'price_unit' => 10]],
+    ])->assertRedirect();
+
+    $this->post(route('movements.store'), [
+        'type' => 'sale',
+        'status' => 'draft',
+        'date' => now()->toDateString(),
+        'discount' => 0,
+        'items' => [['product_id' => $product->id, 'quantity' => 3, 'price_unit' => 20]],
+    ])->assertRedirect();
+
+    $draft = Movement::query()->where('status', 'draft')->firstOrFail();
+    expect((float) Operation::query()->where('product_id', $product->id)->sum('in_qty'))->toBe(2.0)
+        ->and((float) Operation::query()->where('product_id', $product->id)->sum('out_qty'))->toBe(0.0)
+        ->and($draft->items)->toHaveCount(1);
+
+    $this->from(route('movements.show', $draft))
+        ->post(route('movements.confirm', $draft))
+        ->assertRedirect(route('movements.show', $draft))
+        ->assertSessionHasErrors('items');
+
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'date' => now()->toDateString(),
+        'discount' => 0,
+        'items' => [['product_id' => $product->id, 'quantity' => 2, 'price_unit' => 10]],
+    ])->assertRedirect();
+
+    $this->post(route('movements.confirm', $draft))
+        ->assertRedirectToRoute('movements.show', $draft)
+        ->assertSessionHasNoErrors();
+
+    expect($draft->fresh()->status)->toBe('confirmed')
+        ->and((float) Operation::query()->where('product_id', $product->id)->sum('in_qty') - (float) Operation::query()->where('product_id', $product->id)->sum('out_qty'))->toBe(1.0)
+        ->and(Operation::query()->where('movement_id', $draft->id)->count())->toBe(1);
+});
+
+test('invoice filters and PDF exports use the same company-scoped criteria', function () {
+    $customer = Partie::create([
+        'company_id' => $this->company->id,
+        'name' => 'عميل التقرير',
+        'type' => 'customer',
+        'is_active' => true,
+    ]);
+    $matching = Movement::create([
+        'company_id' => $this->company->id,
+        'party_id' => $customer->id,
+        'type' => 'sale',
+        'number' => 501,
+        'document_no' => 'INV-501',
+        'date' => '2026-10-10',
+        'status' => 'draft',
+        'discount' => 0,
+        'total' => 100,
+    ]);
+    Movement::create([
+        'company_id' => $this->company->id,
+        'type' => 'purchase',
+        'number' => 502,
+        'document_no' => 'INV-502',
+        'date' => '2026-10-01',
+        'status' => 'confirmed',
+        'discount' => 0,
+        'total' => 50,
+    ]);
+    $otherCompany = Companie::create(['name' => 'شركة أخرى', 'status' => 'active']);
+    Movement::create([
+        'company_id' => $otherCompany->id,
+        'type' => 'sale',
+        'number' => 503,
+        'document_no' => 'INV-503',
+        'date' => '2026-10-10',
+        'status' => 'draft',
+        'discount' => 0,
+        'total' => 25,
+    ]);
+
+    $filters = [
+        'type' => 'sale',
+        'status' => 'draft',
+        'party_id' => $customer->id,
+        'from_date' => '2026-10-09',
+        'to_date' => '2026-10-11',
+        'search' => 'INV-501',
+    ];
+    $this->get(route('movements.index', $filters))
+        ->assertOk()
+        ->assertSee('#501')
+        ->assertDontSee('#502')
+        ->assertDontSee('#503');
+
+    $report = $this->get(route('movements.export.pdf', $filters))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('Content-Disposition', 'attachment; filename="invoices-report.pdf"');
+    $this->assertStringStartsWith('%PDF', $report->getContent());
+
+    $invoice = $this->get(route('movements.pdf', $matching))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('Content-Disposition', 'inline; filename="invoice-501.pdf"');
+    $this->assertStringStartsWith('%PDF', $invoice->getContent());
 });

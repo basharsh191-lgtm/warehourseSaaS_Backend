@@ -16,10 +16,10 @@
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-100 font-sans text-slate-800 antialiased dark:from-slate-950 dark:via-slate-950 dark:to-emerald-950">
+<body class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-100 font-sans text-slate-800 antialiased dark:from-slate-950 dark:via-slate-950 dark:to-indigo-950">
     <div class="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-        <div class="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald-200/40 blur-3xl dark:bg-emerald-900/20"></div>
-        <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-green-200/40 blur-3xl dark:bg-green-900/20"></div>
+        <div class="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-indigo-200/40 blur-3xl dark:bg-indigo-900/20"></div>
+        <div class="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-violet-200/40 blur-3xl dark:bg-violet-900/20"></div>
     </div>
 
     <main class="relative flex min-h-screen flex-col items-center justify-center px-4 py-10 sm:px-6">

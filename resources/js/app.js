@@ -22,6 +22,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
     parties,
     type: initialValues.type || 'sale',
     partyId: initialValues.partyId || '',
+    status: initialValues.status || 'confirmed',
     search: '',
     items: rows,
     discount: Number(initialValues.discount) || 0,
@@ -141,7 +142,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
             return;
         }
 
-        if (this.type === 'sale') {
+        if (this.type === 'sale' && this.status === 'confirmed') {
             const quantities = new Map();
             this.items.forEach((item) => quantities.set(Number(item.product_id), (quantities.get(Number(item.product_id)) || 0) + Number(item.quantity)));
             const insufficient = [...quantities.entries()].find(([id, quantity]) => {

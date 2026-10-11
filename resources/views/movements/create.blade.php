@@ -19,7 +19,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('movements.store') }}" x-data="movementForm(@js($productsPayload), @js((float) ($company->percent_markup ?? 200)), @js($parties->map(fn ($party) => ['id' => $party->id, 'name' => $party->name, 'type' => $party->type])->values()), @js(old('items', [])), @js(['type' => old('type', 'sale'), 'partyId' => old('party_id', ''), 'discount' => old('discount', 0)]))" @submit.prevent="submitForm($event)" class="space-y-6">
+    <form method="POST" action="{{ route('movements.store') }}" x-data="movementForm(@js($productsPayload), @js((float) ($company->percent_markup ?? 200)), @js($parties->map(fn ($party) => ['id' => $party->id, 'name' => $party->name, 'type' => $party->type])->values()), @js(old('items', [])), @js(['type' => old('type', 'sale'), 'partyId' => old('party_id', ''), 'discount' => old('discount', 0), 'status' => old('status', 'confirmed')]))" @submit.prevent="submitForm($event)" class="space-y-6">
         @csrf
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div class="mb-5">
@@ -40,6 +40,7 @@
                 </label>
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">رقم المستند</span><input type="text" name="document_no" value="{{ old('document_no') }}" maxlength="255" placeholder="رقم فاتورة المورد (اختياري)" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">التاريخ</span><input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
+                <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">حالة الفاتورة</span><select name="status" x-model="status" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="confirmed">تأكيد الفاتورة وتحديث المخزون</option><option value="draft">حفظ كمسودة دون تحديث المخزون</option></select></label>
             </div>
         </section>
 
@@ -88,7 +89,7 @@
                 <div class="flex items-center justify-between text-sm"><span class="text-slate-500 dark:text-slate-400">الإجمالي الفرعي</span><span class="font-semibold tabular-nums text-slate-900 dark:text-white" x-text="subtotal.toFixed(2)"></span></div>
                 <label class="flex items-center justify-between gap-4 text-sm"><span class="font-medium text-slate-600 dark:text-slate-300">خصم الفاتورة</span><input type="number" name="discount" x-model.number="discount" min="0" step="0.01" :max="subtotal" value="{{ old('discount', 0) }}" class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
                 <div class="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700"><span class="font-bold text-slate-900 dark:text-white">الصافي المستحق</span><span class="text-xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400" x-text="total.toFixed(2)"></span></div>
-                <p class="text-xs text-slate-500 dark:text-slate-400">يتم احتساب الإجمالي تلقائياً والتحقق من المخزون قبل حفظ فاتورة البيع.</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">يتم احتساب الإجمالي تلقائياً. الفاتورة المسودة لا تؤثر على المخزون حتى تأكيدها.</p>
             </div>
             <div class="mt-6 flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-5 dark:border-slate-800 sm:flex-row">
                 <a href="{{ route('movements.index') }}" class="rounded-xl border border-slate-200 px-5 py-3 text-center text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">إلغاء</a>
