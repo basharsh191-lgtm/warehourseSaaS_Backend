@@ -5,7 +5,7 @@
 @section('content')
     <div class="mx-auto max-w-md">
         <div class="mb-7 text-center">
-            <span class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/50 dark:text-emerald-300 dark:ring-emerald-800">
+            <span class="accent-icon mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ring-black/5 dark:ring-white/10">
                 <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM4 20a8 8 0 0 1 16 0M19 8h3m-1.5-1.5v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>

@@ -62,7 +62,7 @@
 
             <div class="flex items-center justify-between px-5 py-4">
                 <h2 class="font-bold text-slate-900 dark:text-white">قائمة الأطراف</h2>
-                <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $parties->total() }} طرف</span>
+                <span class="theme-counter rounded-full px-3 py-1 text-xs font-semibold">{{ $parties->total() }} طرف</span>
             </div>
 
             @if ($parties->isEmpty())
@@ -87,7 +87,7 @@
                                         <span @class(['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', 'bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300' => $party->type === 'customer', 'bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300' => $party->type === 'supplier'])>{{ $party->type === 'customer' ? 'عميل' : 'مورد' }}</span>
                                     </td>
                                     <td class="whitespace-nowrap px-5 py-4">
-                                        <span @class(['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' => $party->is_active, 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' => ! $party->is_active])>{{ $party->is_active ? 'نشط' : 'متوقف' }}</span>
+                                        <span @class(['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', 'status-badge' => $party->is_active, 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' => ! $party->is_active])>{{ $party->is_active ? 'نشط' : 'متوقف' }}</span>
                                     </td>
                                     <td class="whitespace-nowrap px-5 py-4">
                                         <div class="flex items-center justify-end gap-2">

@@ -10,6 +10,21 @@
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-400">أدر بيانات شركتك وإعدادات تسعير المنتجات من مكان واحد.</p>
         </header>
 
+        <section class="app-card mb-5 rounded-2xl border p-6" aria-labelledby="accent-theme-heading">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 id="accent-theme-heading" class="font-bold text-slate-900 dark:text-white">اللون الأساسي للنظام</h2>
+                    <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">اختر لون الأزرار والعناصر النشطة في مساحة العمل.</p>
+                </div>
+                <div class="flex items-center gap-3" role="group" aria-label="اختر اللون الأساسي">
+                    <button type="button" class="accent-color-swatch h-9 w-9 rounded-full bg-[#5D5FEF]" data-accent-theme="default" aria-label="الأزرق البنفسجي" title="الأزرق البنفسجي" aria-pressed="false"></button>
+                    <button type="button" class="accent-color-swatch h-9 w-9 rounded-full bg-[#10B981]" data-accent-theme="green" aria-label="الأخضر" title="الأخضر" aria-pressed="false"></button>
+                    <button type="button" class="accent-color-swatch h-9 w-9 rounded-full bg-[#EF4444]" data-accent-theme="red" aria-label="الأحمر" title="الأحمر" aria-pressed="false"></button>
+                    <button type="button" class="accent-color-swatch h-9 w-9 rounded-full bg-[#F59E0B]" data-accent-theme="yellow" aria-label="الأصفر" title="الأصفر" aria-pressed="false"></button>
+                </div>
+            </div>
+        </section>
+
         <div x-data="{ tab: @js($activeTab) }" class="space-y-5">
             <div class="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/80 p-1.5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80" role="tablist" aria-label="أقسام الإعدادات">
                 <button
@@ -19,8 +34,8 @@
                     aria-controls="pricing-panel"
                     :aria-selected="tab === 'pricing'"
                     @click="tab = 'pricing'"
-                    :class="tab === 'pricing' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
-                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    :class="tab === 'pricing' ? 'active text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
+                    class="tab-button inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2v20m5-16H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                     إعدادات التسعير
@@ -32,8 +47,8 @@
                     aria-controls="company-panel"
                     :aria-selected="tab === 'company'"
                     @click="tab = 'company'"
-                    :class="tab === 'company' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
-                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+                    :class="tab === 'company' ? 'active text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
+                    class="tab-button inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                 >
                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.01M15 10h.01M9 14h.01M15 14h.01M10 21v-4h4v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     بيانات الشركة
@@ -105,7 +120,7 @@
                         <button
                             type="submit"
                             :disabled="saving || !isDirty"
-                            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/15 transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
+                            class="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-lg shadow-indigo-900/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900 sm:w-auto"
                         >
                             <svg x-show="saving" class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" class="opacity-25"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" class="opacity-75"/></svg>
                             <span x-text="saving ? 'جارٍ الحفظ…' : 'حفظ إعدادات التسعير'"></span>
@@ -162,7 +177,7 @@
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                             @if ($company->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo_path))
                     <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_path) }}" alt="الشعار الحالي للشركة" class="h-16 w-16 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-900">                            @else
-                                <span class="flex h-16 w-16 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                <span class="accent-icon flex h-16 w-16 items-center justify-center rounded-xl">
                                     <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8 10.75 4 2.25 4-2.25M12 13v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </span>
                             @endif
@@ -176,7 +191,7 @@
                     </div>
 
                     <div class="flex justify-end border-t border-slate-100 pt-5 dark:border-slate-800">
-                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-900/15 transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 sm:w-auto">حفظ بيانات الشركة</button>
+                        <button type="submit" class="btn-primary inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-sm font-bold shadow-lg shadow-indigo-900/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 sm:w-auto">حفظ بيانات الشركة</button>
                     </div>
                 </form>
             </section>

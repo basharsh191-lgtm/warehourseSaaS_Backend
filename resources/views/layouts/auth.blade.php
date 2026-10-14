@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="rtl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="rtl" data-theme="default">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +7,12 @@
     <title>@yield('title') - {{ config('app.name', 'Warehouse SaaS') }}</title>
     <script>
         (() => {
+            const accentThemes = ['default', 'green', 'red', 'yellow'];
+            const savedAccentTheme = localStorage.getItem('warehouse-accent-theme');
+            if (accentThemes.includes(savedAccentTheme)) {
+                document.documentElement.dataset.theme = savedAccentTheme;
+            }
+
             const savedTheme = localStorage.getItem('warehouse-theme');
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
@@ -25,7 +31,7 @@
     <main class="relative flex min-h-screen flex-col items-center justify-center px-4 py-10 sm:px-6">
         <div class="mb-7 flex w-full max-w-2xl items-center justify-between gap-3">
             <a href="{{ route('login') }}" class="inline-flex items-center gap-3 rounded-full border border-white/80 bg-white/70 px-4 py-2 shadow-sm backdrop-blur transition hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:hover:bg-slate-800">
-                <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm shadow-emerald-900/15">
+                <span class="brand-mark flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-sm shadow-emerald-900/15">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
                         <path d="m8 10.75 4 2.25 4-2.25M12 13v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>

@@ -7,7 +7,18 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $guarded = [];
+    protected $fillable = [
+        'company_id',
+        'category_id',
+        'barcode',
+        'name',
+        'unit',
+        'location',
+        'item_shape',
+        'price_sale_custom',
+        'stock_min',
+        'is_active',
+    ];
 
     protected static function booted(): void
     {

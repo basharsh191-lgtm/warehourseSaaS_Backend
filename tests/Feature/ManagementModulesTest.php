@@ -148,6 +148,7 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
         'name' => 'صندوق',
         'barcode' => 'BOX-01',
         'unit' => 'قطعة',
+        'item_shape' => 'قياسي',
         'price_sale_custom' => null,
         'is_active' => true,
     ]);
@@ -167,6 +168,7 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
     $this->get(route('movements.create'))
         ->assertOk()
         ->assertSee("'items['", false)
+        ->assertSee('شكل المادة / الموديل')
         ->assertSee('BOX-01');
 
     $this->post(route('movements.store'), [
@@ -175,13 +177,17 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
         'discount' => '5.00',
         'document_no' => 'SUP-100',
         'items' => [
-            ['product_id' => $product->id, 'quantity' => '2.500', 'price_unit' => '10.00'],
+            ['product_id' => $product->id, 'quantity' => '2.500', 'price_unit' => '10.00', 'item_shape' => 'شكل مخصص للفاتورة'],
         ],
     ])->assertRedirect();
 
     $purchase = \App\Models\Movement::query()->firstOrFail();
     expect((float) $purchase->total)->toBe(20.0)
+        ->and($purchase->items()->firstOrFail()->item_shape)->toBe('شكل مخصص للفاتورة')
         ->and((float) Operation::query()->sum('in_qty'))->toBe(2.5);
+    $this->get(route('movements.show', $purchase))
+        ->assertOk()
+        ->assertSee('شكل مخصص للفاتورة');
 
     $this->post(route('movements.store'), [
         'type' => 'sale',

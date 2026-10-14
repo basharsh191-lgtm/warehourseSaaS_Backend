@@ -30,12 +30,13 @@
     <h2>مواد الفاتورة</h2>
     <table>
         <thead>
-            <tr><th>المادة</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
+            <tr><th>المادة</th><th>شكل المادة / الموديل</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr>
         </thead>
         <tbody>
             @foreach ($movement->items as $item)
                 <tr>
                     <td>{{ $item->product?->name ?? 'مادة محذوفة' }}</td>
+                    <td>{{ $item->item_shape ?: '—' }}</td>
                     <td>{{ number_format((float) $item->quantity, 3) }}</td>
                     <td>{{ number_format((float) $item->price_unit, 2) }}</td>
                     <td>{{ number_format((float) $item->total_line, 2) }}</td>

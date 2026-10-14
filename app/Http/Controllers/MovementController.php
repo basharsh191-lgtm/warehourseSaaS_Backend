@@ -66,6 +66,7 @@ class MovementController extends Controller
             'stock' => (float) ($stocks[$product->id] ?? 0),
             'purchase_price' => (float) ($purchasePrices[$product->id] ?? 0),
             'sale_price' => $product->price_sale_custom === null ? null : (float) $product->price_sale_custom,
+            'item_shape' => $product->item_shape,
         ])->values();
         $parties = $company->parties()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'type']);
 
@@ -93,6 +94,7 @@ class MovementController extends Controller
             ],
             'items.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999.999'],
             'items.*.price_unit' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'items.*.item_shape' => ['nullable', 'string', 'max:255'],
         ]);
         $validated['status'] = $validated['status'] ?? 'confirmed';
         $validated['party_id'] = $validated['party_id'] ?? null;
@@ -110,6 +112,7 @@ class MovementController extends Controller
             'product_id' => (int) $item['product_id'],
             'quantity' => (float) $item['quantity'],
             'price_unit' => (float) $item['price_unit'],
+            'item_shape' => $item['item_shape'] ?? null,
             'total_line' => round((float) $item['quantity'] * (float) $item['price_unit'], 2),
         ]);
         $subtotal = round($items->sum('total_line'), 2);
@@ -158,6 +161,7 @@ class MovementController extends Controller
                     'product_id' => $item['product_id'],
                     'quantity' => $item['quantity'],
                     'price_unit' => $item['price_unit'],
+                    'item_shape' => $item['item_shape'],
                     'total_line' => $item['total_line'],
                 ]);
             }

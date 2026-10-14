@@ -33,7 +33,7 @@
                 <h2 class="font-bold text-slate-900 dark:text-white">قائمة المواد</h2>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">تظهر هنا مواد شركتك فقط.</p>
             </div>
-            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{{ $products->total() }} مادة</span>
+            <span class="theme-counter rounded-full px-3 py-1 text-xs font-semibold">{{ $products->total() }} مادة</span>
         </div>
 
         @if ($products->isEmpty())
@@ -48,6 +48,7 @@
                         <tr class="text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             <th class="px-5 py-3">المادة</th>
                             <th class="px-5 py-3">الباركود</th>
+                            <th class="px-5 py-3">شكل المادة / الموديل</th>
                             <th class="px-5 py-3">الفئة</th>
                             <th class="px-5 py-3">الوحدة</th>
                             <th class="px-5 py-3">الموقع / الرف</th>
@@ -62,6 +63,7 @@
                             <tr class="text-sm transition hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
                                 <td class="whitespace-nowrap px-5 py-4 font-semibold text-slate-900 dark:text-slate-100">{{ $product->name }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 font-mono text-xs text-slate-500 dark:text-slate-400">{{ $product->barcode ?: '—' }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->item_shape ?: '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->category?->name ?: '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->unit }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->location ?: '—' }}</td>
@@ -70,7 +72,7 @@
                                 <td class="whitespace-nowrap px-5 py-4">
                                     <span @class([
                                         'inline-flex rounded-full px-2.5 py-1 text-xs font-semibold',
-                                        'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' => $product->is_active,
+                                        'status-badge' => $product->is_active,
                                         'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400' => ! $product->is_active,
                                     ])>{{ $product->is_active ? 'نشطة' : 'متوقفة' }}</span>
                                 </td>

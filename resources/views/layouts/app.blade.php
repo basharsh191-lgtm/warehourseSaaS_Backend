@@ -2,6 +2,7 @@
 <html
     lang="{{ str_replace('_', '-', app()->getLocale()) }}"
     dir="rtl"
+    data-theme="default"
 >
 <head>
 
@@ -24,6 +25,13 @@
     {{-- الثيم --}}
     <script>
         (() => {
+            const accentThemes = ['default', 'green', 'red', 'yellow'];
+            const savedAccentTheme = localStorage.getItem('warehouse-accent-theme');
+
+            if (accentThemes.includes(savedAccentTheme)) {
+                document.documentElement.dataset.theme = savedAccentTheme;
+            }
+
             const savedTheme = localStorage.getItem('warehouse-theme');
 
             const prefersDark =

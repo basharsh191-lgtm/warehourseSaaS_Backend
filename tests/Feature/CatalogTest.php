@@ -131,6 +131,7 @@ test('product can be saved with inventory details and deactivated', function () 
             'barcode' => '1234567890123',
             'name' => 'صندوق تخزين',
             'unit' => 'قطعة',
+            'item_shape' => 'مستطيل',
             'location' => 'A-03',
             'price_sale_custom' => '12.50',
             'stock_min' => '2.500',
@@ -140,9 +141,23 @@ test('product can be saved with inventory details and deactivated', function () 
 
     $product = Product::query()->where('barcode', '1234567890123')->firstOrFail();
     expect($product->name)->toBe('صندوق تخزين')
+        ->and($product->item_shape)->toBe('مستطيل')
         ->and($product->location)->toBe('A-03')
         ->and((float) $product->price_sale_custom)->toBe(12.5)
         ->and((float) $product->stock_min)->toBe(2.5);
+
+    $this->put(route('products.update', $product), [
+        'barcode' => '1234567890123',
+        'name' => 'صندوق تخزين',
+        'unit' => 'قطعة',
+        'item_shape' => 'دائري',
+        'location' => 'A-03',
+        'price_sale_custom' => '12.50',
+        'stock_min' => '2.500',
+        'category_id' => $category->id,
+    ])->assertRedirectToRoute('products.index');
+
+    expect($product->fresh()->item_shape)->toBe('دائري');
 
     $this->patch(route('products.toggle-status', $product))
         ->assertRedirectToRoute('products.index');

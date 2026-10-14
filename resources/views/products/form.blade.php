@@ -67,6 +67,16 @@
                 </div>
 
                 <div>
+                    <label for="item_shape" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">شكل المادة / الموديل <span class="font-normal text-slate-400">(اختياري)</span></label>
+                    <input id="item_shape" name="item_shape" type="text" value="{{ old('item_shape', $product->item_shape) }}" maxlength="255" placeholder="مثال: ربطة، تزينة، سادة..." @class([
+                        'w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500',
+                        'border-rose-300 focus:border-rose-500 focus:ring-rose-100' => $errors->has('item_shape'),
+                        'border-slate-200 focus:border-emerald-500 focus:ring-emerald-100 dark:border-slate-700 dark:focus:ring-emerald-900' => ! $errors->has('item_shape'),
+                    ])>
+                    @error('item_shape')<p class="mt-1.5 text-xs text-rose-600">{{ $message }}</p>@enderror
+                </div>
+
+                <div>
                     <label for="location" class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200">الموقع / الرف <span class="font-normal text-slate-400">(اختياري)</span></label>
                     <input id="location" name="location" type="text" value="{{ old('location', $product->location) }}" maxlength="255" placeholder="مثال: مستودع A - رف 03" @class([
                         'w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:ring-4 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500',

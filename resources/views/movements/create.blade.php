@@ -60,8 +60,8 @@
 
             <div x-cloak x-show="error" x-text="error" role="alert" class="mx-5 mt-5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300"></div>
             <div class="overflow-x-auto">
-                <table class="min-w-[900px] w-full divide-y divide-slate-200 dark:divide-slate-800">
-                    <thead class="bg-slate-50 dark:bg-slate-950/60"><tr class="text-right text-xs font-semibold text-slate-500 dark:text-slate-400"><th class="px-4 py-3">المادة والباركود</th><th class="px-4 py-3">المخزون المتاح</th><th class="px-4 py-3">الكمية</th><th class="px-4 py-3">سعر الوحدة</th><th class="px-4 py-3">الإجمالي</th><th class="px-4 py-3"><span class="sr-only">حذف</span></th></tr></thead>
+                <table class="min-w-[1100px] w-full divide-y divide-slate-200 dark:divide-slate-800">
+                    <thead class="bg-slate-50 dark:bg-slate-950/60"><tr class="text-right text-xs font-semibold text-slate-500 dark:text-slate-400"><th class="px-4 py-3">المادة والباركود</th><th class="px-4 py-3">شكل المادة / الموديل</th><th class="px-4 py-3">المخزون المتاح</th><th class="px-4 py-3">الكمية</th><th class="px-4 py-3">سعر الوحدة</th><th class="px-4 py-3">الإجمالي</th><th class="px-4 py-3"><span class="sr-only">حذف</span></th></tr></thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                         <template x-for="(item, index) in items" :key="index">
                             <tr>
@@ -70,6 +70,9 @@
                                         <option value="">اختر المادة</option><template x-for="product in products" :key="product.id"><option :value="product.id" x-text="product.name + (product.barcode ? ' · ' + product.barcode : '')"></option></template>
                                     </select>
                                     <p class="mt-1 text-xs text-slate-500" x-text="item.barcode || '—'"></p>
+                                </td>
+                                <td class="min-w-48 px-4 py-3">
+                                    <input type="text" x-model="item.item_shape" :name="'items[' + index + '][item_shape]'" maxlength="255" placeholder="مثال: ربطة، تزينة، سادة..." class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3"><span x-show="type === 'sale'" :class="item.quantity > item.stock ? 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'" class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" x-text="item.stock + ' متاح'"></span><span x-show="type !== 'sale'" class="text-xs text-slate-400">غير مطلوب</span></td>
                                 <td class="px-4 py-3"><input type="number" min="0.001" step="0.001" max="999999999.999" x-model.number="item.quantity" :name="'items[' + index + '][quantity]'" required class="w-28 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></td>

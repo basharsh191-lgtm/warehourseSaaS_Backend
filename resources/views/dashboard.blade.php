@@ -36,7 +36,7 @@
 
             {{-- الأيقونة --}}
             <div
-                class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                class="accent-icon flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl"
             >
                 <svg
                     class="h-7 w-7"
@@ -74,7 +74,7 @@
             >
 
                 <span
-                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                    class="accent-icon flex h-11 w-11 items-center justify-center rounded-xl"
                 >
                     <svg
                         class="h-6 w-6"
@@ -111,7 +111,7 @@
             >
 
                 <span
-                    class="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
+                    class="accent-icon flex h-11 w-11 items-center justify-center rounded-xl"
                 >
                     <svg
                         class="h-6 w-6"

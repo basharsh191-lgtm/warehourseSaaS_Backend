@@ -78,6 +78,7 @@ class ProductController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'unit' => ['required', 'string', 'max:100'],
             'location' => ['nullable', 'string', 'max:255'],
+            'item_shape' => ['nullable', 'string', 'max:255'],
             'price_sale_custom' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'stock_min' => ['nullable', 'numeric', 'min:0', 'max:999999999.999'],
             'category_id' => [

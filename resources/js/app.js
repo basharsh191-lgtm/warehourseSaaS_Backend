@@ -10,6 +10,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
             product_id: item.product_id,
             quantity: Number(item.quantity) || 1,
             price_unit: Number(item.price_unit) || 0,
+            item_shape: item.item_shape ?? product?.item_shape ?? '',
             name: product?.name ?? '',
             barcode: product?.barcode ?? '',
             stock: Number(product?.stock) || 0,
@@ -79,7 +80,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
         return Math.max(0, this.subtotal - (Number(this.discount) || 0));
     },
     addBlankItem() {
-        this.items.push({ product_id: '', quantity: 1, price_unit: 0, name: '', barcode: '', stock: 0 });
+        this.items.push({ product_id: '', quantity: 1, price_unit: 0, item_shape: '', name: '', barcode: '', stock: 0 });
     },
     addProduct(product) {
         const row = this.items.find((item) => Number(item.product_id) === Number(product.id));
@@ -95,6 +96,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
                 product_id: product.id,
                 quantity: 1,
                 price_unit: Number(price) || 0,
+                item_shape: product.item_shape ?? '',
                 name: product.name,
                 barcode: product.barcode ?? '',
                 stock: Number(product.stock) || 0,
@@ -106,7 +108,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
     },
     selectProduct(row, product) {
         if (!product) {
-            Object.assign(row, { product_id: '', name: '', barcode: '', stock: 0, price_unit: 0 });
+            Object.assign(row, { product_id: '', name: '', barcode: '', stock: 0, price_unit: 0, item_shape: '' });
             return;
         }
 
@@ -118,6 +120,7 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
             product_id: product.id,
             name: product.name,
             barcode: product.barcode ?? '',
+            item_shape: product.item_shape ?? '',
             stock: Number(product.stock) || 0,
             price_unit: Number(price) || 0,
         });
@@ -163,6 +166,37 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
 });
 
 Alpine.start();
+
+const accentThemes = new Set(['default', 'green', 'red', 'yellow']);
+const root = document.documentElement;
+const accentThemeButtons = document.querySelectorAll('[data-accent-theme]');
+const storedAccentTheme = localStorage.getItem('warehouse-accent-theme');
+const initialAccentTheme = accentThemes.has(storedAccentTheme) ? storedAccentTheme : 'default';
+
+root.dataset.theme = initialAccentTheme;
+
+accentThemeButtons.forEach((button) => {
+    const selected = button.dataset.accentTheme === initialAccentTheme;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+
+    button.addEventListener('click', () => {
+        const selectedTheme = button.dataset.accentTheme;
+
+        if (!accentThemes.has(selectedTheme)) {
+            return;
+        }
+
+        root.dataset.theme = selectedTheme;
+        localStorage.setItem('warehouse-accent-theme', selectedTheme);
+
+        accentThemeButtons.forEach((themeButton) => {
+            const isSelected = themeButton.dataset.accentTheme === selectedTheme;
+            themeButton.classList.toggle('active', isSelected);
+            themeButton.setAttribute('aria-pressed', String(isSelected));
+        });
+    });
+});
 
 const themeToggle = document.querySelector('[data-theme-toggle]');
 

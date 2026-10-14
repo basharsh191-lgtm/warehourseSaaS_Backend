@@ -41,10 +41,10 @@
         <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800"><h2 class="font-bold text-slate-900 dark:text-white">مواد الفاتورة</h2></div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-800">
-                <thead class="bg-slate-50 dark:bg-slate-950/60"><tr class="text-right text-xs font-semibold text-slate-500 dark:text-slate-400"><th class="px-5 py-3">المادة</th><th class="px-5 py-3">الكمية</th><th class="px-5 py-3">سعر الوحدة</th><th class="px-5 py-3">الإجمالي</th></tr></thead>
+                <thead class="bg-slate-50 dark:bg-slate-950/60"><tr class="text-right text-xs font-semibold text-slate-500 dark:text-slate-400"><th class="px-5 py-3">المادة</th><th class="px-5 py-3">شكل المادة / الموديل</th><th class="px-5 py-3">الكمية</th><th class="px-5 py-3">سعر الوحدة</th><th class="px-5 py-3">الإجمالي</th></tr></thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
                     @foreach ($movement->items as $item)
-                        <tr class="text-sm"><td class="px-5 py-4 font-semibold text-slate-900 dark:text-slate-100">{{ $item->product?->name ?? 'مادة محذوفة' }}</td><td class="px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ number_format((float) $item->quantity, 3) }}</td><td class="px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ number_format((float) $item->price_unit, 2) }}</td><td class="px-5 py-4 font-semibold tabular-nums text-slate-900 dark:text-slate-100">{{ number_format((float) $item->total_line, 2) }}</td></tr>
+                        <tr class="text-sm"><td class="px-5 py-4 font-semibold text-slate-900 dark:text-slate-100">{{ $item->product?->name ?? 'مادة محذوفة' }}</td><td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ $item->item_shape ?: '—' }}</td><td class="px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ number_format((float) $item->quantity, 3) }}</td><td class="px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ number_format((float) $item->price_unit, 2) }}</td><td class="px-5 py-4 font-semibold tabular-nums text-slate-900 dark:text-slate-100">{{ number_format((float) $item->total_line, 2) }}</td></tr>
                     @endforeach
                 </tbody>
             </table>

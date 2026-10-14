@@ -19,7 +19,7 @@
         >
             @if ($companyLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($companyLogo))
 <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($companyLogo) }}" alt="شعار {{ $companyName }}" class="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-800">            @else
-                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-lg shadow-indigo-900/20">
+                <span class="brand-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-lg shadow-indigo-900/20">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
                         <path d="m8 10.75 4 2.25 4-2.25M12 13v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -50,7 +50,7 @@
                     href="{{ route('dashboard') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('dashboard'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('dashboard'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('dashboard'),
                     ])
                 >
@@ -72,7 +72,7 @@
                     href="{{ route('categories.index') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('categories.*'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('categories.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('categories.*'),
                     ])
                 >
@@ -97,7 +97,7 @@
                     href="{{ route('products.index') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('products.*'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('products.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('products.*'),
                     ])
                 >
@@ -119,7 +119,7 @@
                     href="{{ route('parties.index') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('parties.*'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('parties.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('parties.*'),
                     ])
                 >
@@ -144,7 +144,7 @@
                     href="{{ route('movements.index') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('movements.*'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('movements.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('movements.*'),
                     ])
                 >
@@ -169,7 +169,7 @@
                     href="{{ route('settings.index') }}"
                     @class([
                         'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
-                        'bg-emerald-600 text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('settings.*'),
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('settings.*'),
                         'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('settings.*'),
                     ])
                 >
