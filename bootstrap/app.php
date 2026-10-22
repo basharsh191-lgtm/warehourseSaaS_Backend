@@ -1,10 +1,11 @@
 <?php
 
+use App\Http\Middleware\CheckSubscriptionStatus;
+use App\Http\Middleware\EnsureCompanyAdmin;
+use App\Http\Middleware\EnsureSuperAdmin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use App\Http\Middleware\CheckSubscriptionStatus;
-use App\Http\Middleware\EnsureCompanyAdmin;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'subscription' => CheckSubscriptionStatus::class,
             'company.admin' => EnsureCompanyAdmin::class,
+            'super.admin' => EnsureSuperAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

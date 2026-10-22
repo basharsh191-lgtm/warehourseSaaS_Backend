@@ -86,7 +86,7 @@
                     </button>
                     <span class="flex min-w-0 items-center gap-2">
                         @if (auth()->user()?->company?->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists(auth()->user()->company->logo_path))
-                            <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url(auth()->user()->company->logo_path) }}" alt="" class="h-8 w-8 shrink-0 rounded-lg border border-slate-200 bg-white object-contain p-0.5 dark:border-slate-700 dark:bg-slate-800">
+                            <img src="{{ asset('storage/'.ltrim(auth()->user()->company->logo_path, '/')) }}" alt="" class="h-8 w-8 shrink-0 rounded-lg border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-800">
                         @endif
                         <span class="truncate text-sm font-bold text-slate-800 dark:text-slate-100">
                             {{ auth()->user()?->company?->name ?? config('app.name', 'Warehouse SaaS') }}

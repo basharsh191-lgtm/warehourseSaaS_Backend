@@ -20,7 +20,16 @@ class CheckSubscriptionStatus
             abort(403, 'يجب ربط المستخدم بشركة للوصول إلى هذه الصفحة.');
         }
 
-        $status = $user->company()->value('status');
+        $company = $user->company()->first(['id', 'status', 'trial_ends_at']);
+
+        if (
+            $company?->status === 'trial'
+            && $company->trial_ends_at?->isBefore(today())
+        ) {
+            $company->update(['status' => 'suspended']);
+        }
+
+        $status = $company?->fresh()->status;
 
         if ($status === 'suspended') {
             return redirect()

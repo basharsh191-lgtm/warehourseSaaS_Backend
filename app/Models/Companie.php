@@ -8,6 +8,18 @@ class Companie extends Model
 {
     protected $guarded = [];
 
+    public static function suspendExpiredTrials(): int
+    {
+        return static::query()
+            ->where('status', 'trial')
+            ->whereNotNull('trial_ends_at')
+            ->whereDate('trial_ends_at', '<', today())
+            ->update([
+                'status' => 'suspended',
+                'updated_at' => now(),
+            ]);
+    }
+
     protected function casts(): array
     {
         return [

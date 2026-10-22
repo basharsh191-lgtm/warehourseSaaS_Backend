@@ -8,8 +8,8 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -140,6 +140,22 @@ test('company settings update contact details and store a company logo', functio
         ->and($company->logo_path)->not->toBeNull();
 
     Storage::disk('public')->assertExists($company->logo_path);
+});
+
+test('saved company logo uses the current application host in company navigation and settings', function () {
+    Storage::fake('public');
+    Storage::disk('public')->put('company-logos/company-logo.png', 'logo');
+    $this->company->update(['logo_path' => 'company-logos/company-logo.png']);
+
+    $this->get(route('settings.index', ['tab' => 'company']))
+        ->assertOk()
+        ->assertSee('src="'.asset('storage/company-logos/company-logo.png').'"', false)
+        ->assertSee('alt="الشعار الحالي للشركة"', false);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('src="'.asset('storage/company-logos/company-logo.png').'"', false)
+        ->assertSee('alt="شعار '.$this->company->name.'"', false);
 });
 
 test('purchase invoices increase stock and sale invoices cannot exceed available stock', function () {

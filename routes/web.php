@@ -7,6 +7,9 @@ use App\Http\Controllers\MovementController;
 use App\Http\Controllers\PartieController;
 use App\Http\Controllers\PricingSettingController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SuperAdmin\CompanyController as SuperAdminCompanyController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\UserController as SuperAdminUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -36,14 +39,32 @@ Route::view('/subscription/suspended', 'subscription.suspended')
 Route::get('/dashboard', function (Request $request) {
     abort_unless($request->user()->role === 'company_admin', 403);
 
-    return view('dashboard', ['isSuperAdmin' => false]);
+    $company = $request->user()->company;
+    $trialDaysRemaining = $company?->status === 'trial' && $company->trial_ends_at
+        ? today()->diffInDays($company->trial_ends_at, false)
+        : null;
+
+    return view('dashboard', [
+        'isSuperAdmin' => false,
+        'company' => $company,
+        'trialDurationDays' => config('subscription.trial_days', 14),
+        'trialDaysRemaining' => $trialDaysRemaining,
+    ]);
 })->middleware('auth')->name('dashboard');
 
-Route::get('/admin/dashboard', function (Request $request) {
-    abort_unless($request->user()->role === 'super_admin', 403);
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware(['auth', 'super.admin'])
+    ->group(function () {
+        Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
 
-    return view('dashboard', ['isSuperAdmin' => true]);
-})->middleware('auth')->name('admin.dashboard');
+        Route::get('/companies', [SuperAdminCompanyController::class, 'index'])->name('companies.index');
+        Route::get('/companies/{company}/edit', [SuperAdminCompanyController::class, 'edit'])->name('companies.edit');
+        Route::put('/companies/{company}', [SuperAdminCompanyController::class, 'update'])->name('companies.update');
+        Route::post('/companies/{company}/extend-trial', [SuperAdminCompanyController::class, 'extendTrial'])->name('companies.extend-trial');
+
+        Route::get('/users', [SuperAdminUserController::class, 'index'])->name('users.index');
+    });
 
 Route::middleware(['auth', 'subscription', 'company.admin'])->group(function () {
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');

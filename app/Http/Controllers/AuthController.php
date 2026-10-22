@@ -65,7 +65,7 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-public function register(Request $request): RedirectResponse
+    public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'company_name' => ['required', 'string', 'max:255'],
@@ -78,7 +78,7 @@ public function register(Request $request): RedirectResponse
             $company = Companie::create([
                 'name' => $validated['company_name'],
                 'status' => 'trial',
-                'trial_ends_at' => now()->addDays(14),
+                'trial_ends_at' => now()->addDays(config('subscription.trial_days', 14)),
                 'percent_markup' => 200.00,
             ]);
 

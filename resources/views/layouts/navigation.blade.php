@@ -18,7 +18,8 @@
             class="mb-5 flex items-center gap-3 border-b border-slate-200 px-2 pb-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:border-slate-800"
         >
             @if ($companyLogo && \Illuminate\Support\Facades\Storage::disk('public')->exists($companyLogo))
-<img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($companyLogo) }}" alt="شعار {{ $companyName }}" class="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-800">            @else
+                <img src="{{ asset('storage/'.ltrim($companyLogo, '/')) }}" alt="شعار {{ $companyName }}" class="h-10 w-10 shrink-0 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-800">
+            @else
                 <span class="brand-mark flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-lg shadow-indigo-900/20">
                     <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                         <path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>

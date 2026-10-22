@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\Password;
 uses(RefreshDatabase::class);
 
 test('registration creates a trial company and company administrator', function () {
+    config(['subscription.trial_days' => 10]);
+    $this->seed(\Database\Seeders\RoleSeeder::class);
+
     $response = $this->post(route('register.store'), [
         'company_name' => 'شركة الاختبار',
         'name' => 'مسؤول الشركة',
@@ -22,7 +25,7 @@ test('registration creates a trial company and company administrator', function 
 
     $company = Companie::where('name', 'شركة الاختبار')->firstOrFail();
     expect($company->status)->toBe('trial')
-        ->and($company->trial_ends_at->toDateString())->toBe(now()->addDays(14)->toDateString())
+        ->and($company->trial_ends_at->toDateString())->toBe(now()->addDays(10)->toDateString())
         ->and((float) $company->percent_markup)->toBe(200.0);
 
     $this->assertDatabaseHas('users', [
@@ -146,4 +149,29 @@ test('dashboard includes the persistent dark mode toggle', function () {
         ->assertSee('data-theme-toggle', false)
         ->assertSee('data-theme-icon="moon"', false)
         ->assertSee('data-theme-icon="sun"', false);
+});
+
+test('company dashboard shows the configured trial duration and remaining days', function () {
+    config(['subscription.trial_days' => 14]);
+
+    $company = Companie::create([
+        'name' => 'شركة الفترة التجريبية',
+        'status' => 'trial',
+        'trial_ends_at' => today()->addDays(5),
+    ]);
+    $user = User::create([
+        'company_id' => $company->id,
+        'name' => 'مدير الشركة',
+        'email' => 'trial-owner@example.com',
+        'password' => Hash::make('password-123'),
+        'role' => 'company_admin',
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('مدة التجربة 14 يوماً')
+        ->assertSee('تاريخ انتهاء التجربة: '.$company->trial_ends_at->format('Y-m-d'))
+        ->assertSee('متبقي 5 أيام');
 });

@@ -176,7 +176,8 @@
                     <div class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-950/50">
                         <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
                             @if ($company->logo_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo_path))
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($company->logo_path) }}" alt="الشعار الحالي للشركة" class="h-16 w-16 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-900">                            @else
+                                <img src="{{ asset('storage/'.ltrim($company->logo_path, '/')) }}" alt="الشعار الحالي للشركة" class="h-16 w-16 rounded-xl border border-slate-200 bg-white object-cover dark:border-slate-700 dark:bg-slate-900">
+                            @else
                                 <span class="accent-icon flex h-16 w-16 items-center justify-center rounded-xl">
                                     <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5v-8Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="m8 10.75 4 2.25 4-2.25M12 13v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </span>
