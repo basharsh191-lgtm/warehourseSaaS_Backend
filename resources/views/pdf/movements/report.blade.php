@@ -38,7 +38,7 @@
                     <td>{{ $typeLabels[$movement->type] ?? $movement->type }}</td>
                     <td>{{ $movement->date?->format('Y-m-d') ?? '—' }}</td>
                     <td>{{ $movement->party?->name ?? 'نقدي مباشر' }}</td>
-                    <td>{{ number_format((float) $movement->total, 2) }}</td>
+                    <td>{{ number_format((float) $movement->total, 2) }} {{ $movement->currency ?: $currency }}</td>
                     <td>{{ $statusLabels[$movement->status] ?? $movement->status }}</td>
                 </tr>
             @empty

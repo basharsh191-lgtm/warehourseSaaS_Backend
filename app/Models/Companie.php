@@ -27,6 +27,11 @@ class Companie extends Model
         ];
     }
 
+    public function getCurrencyAttribute(?string $value): string
+    {
+        return $value ?: 'USD';
+    }
+
     public function users()
     {
         return $this->hasMany(User::class, 'company_id');

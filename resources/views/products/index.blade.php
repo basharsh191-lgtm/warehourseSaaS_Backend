@@ -67,7 +67,7 @@
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->category?->name ?: '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->unit }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->location ?: '—' }}</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ $product->price_sale_custom !== null ? number_format((float) $product->price_sale_custom, 2) : '—' }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ $product->price_sale_custom !== null ? number_format((float) $product->price_sale_custom, 2).' '.$currency : '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ $product->stock_min !== null ? rtrim(rtrim(number_format((float) $product->stock_min, 3, '.', ''), '0'), '.') : '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">
                                     <span @class([

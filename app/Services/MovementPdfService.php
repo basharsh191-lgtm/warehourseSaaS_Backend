@@ -16,9 +16,9 @@ class MovementPdfService
         return $this->makePdf($html, "invoice-{$movement->number}.pdf", 'inline');
     }
 
-    public function report(Collection $movements): Response
+    public function report(Collection $movements, string $currency): Response
     {
-        $html = view('pdf.movements.report', compact('movements'))->render();
+        $html = view('pdf.movements.report', compact('movements', 'currency'))->render();
 
         return $this->makePdf($html, 'invoices-report.pdf', 'attachment');
     }

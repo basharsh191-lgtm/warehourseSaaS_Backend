@@ -17,6 +17,8 @@
     @php
         $typeLabels = ['sale' => 'بيع', 'purchase' => 'شراء', 'purchase_return' => 'مرتجع شراء', 'sale_return' => 'مرتجع بيع'];
         $statusLabels = ['confirmed' => 'مؤكدة', 'draft' => 'مسودة', 'cancelled' => 'ملغاة'];
+        $currency = $movement->currency;
+        $discountTypeLabels = ['fixed' => 'مبلغ ثابت', 'percentage' => 'نسبة مئوية'];
     @endphp
     <h1>فاتورة رقم #{{ $movement->number }}</h1>
     <p class="muted">{{ $typeLabels[$movement->type] ?? $movement->type }} · {{ $movement->date?->format('Y-m-d') ?? '—' }}</p>
@@ -38,8 +40,8 @@
                     <td>{{ $item->product?->name ?? 'مادة محذوفة' }}</td>
                     <td>{{ $item->item_shape ?: '—' }}</td>
                     <td>{{ number_format((float) $item->quantity, 3) }}</td>
-                    <td>{{ number_format((float) $item->price_unit, 2) }}</td>
-                    <td>{{ number_format((float) $item->total_line, 2) }}</td>
+                    <td>{{ number_format((float) $item->price_unit, 2) }} {{ $currency }}</td>
+                    <td>{{ number_format((float) $item->total_line, 2) }} {{ $currency }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -48,9 +50,9 @@
     <h2>ملخص الفاتورة</h2>
     <table class="summary">
         <tbody>
-            <tr><td>الإجمالي الفرعي</td><td>{{ number_format($movement->items->sum(fn ($item) => (float) $item->total_line), 2) }}</td></tr>
-            <tr><td>الخصم</td><td>{{ number_format((float) $movement->discount, 2) }}</td></tr>
-            <tr><th>الصافي المستحق</th><th>{{ number_format((float) $movement->total, 2) }}</th></tr>
+            <tr><td>الإجمالي الفرعي</td><td>{{ number_format($movement->items->sum(fn ($item) => (float) $item->total_line), 2) }} {{ $currency }}</td></tr>
+            <tr><td>الخصم ({{ $discountTypeLabels[$movement->discount_type ?? 'fixed'] ?? 'مبلغ ثابت' }}: {{ number_format((float) ($movement->discount_value ?? $movement->discount), 2) }}{{ ($movement->discount_type ?? 'fixed') === 'percentage' ? '%' : ' '.$currency }})</td><td>−{{ number_format((float) ($movement->discount_amount ?? $movement->discount), 2) }} {{ $currency }}</td></tr>
+            <tr><th>الصافي المستحق</th><th>{{ number_format((float) $movement->total, 2) }} {{ $currency }}</th></tr>
         </tbody>
     </table>
 </body>

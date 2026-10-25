@@ -18,7 +18,10 @@ class ProductController extends Controller
             ->latest()
             ->paginate(15);
 
-        return view('products.index', compact('products'));
+        return view('products.index', [
+            'products' => $products,
+            'currency' => auth()->user()->company->currency,
+        ]);
     }
 
     public function create(): View

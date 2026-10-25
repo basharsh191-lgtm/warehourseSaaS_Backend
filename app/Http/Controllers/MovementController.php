@@ -28,7 +28,11 @@ class MovementController extends Controller
             ->withQueryString();
         $parties = $request->user()->company->parties()->orderBy('name')->get(['id', 'name', 'type']);
 
-        return view('movements.index', compact('movements', 'parties'));
+        return view('movements.index', [
+            'movements' => $movements,
+            'parties' => $parties,
+            'currency' => $request->user()->company->currency,
+        ]);
     }
 
     public function exportPdf(Request $request, MovementPdfService $pdfService): Response
@@ -36,7 +40,7 @@ class MovementController extends Controller
         $filters = $this->validatedFilters($request);
         $movements = $this->filteredMovements($request, $filters)->get();
 
-        return $pdfService->report($movements);
+        return $pdfService->report($movements, $request->user()->company->currency);
     }
 
     public function create(Request $request): View
@@ -76,16 +80,26 @@ class MovementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $company = $request->user()->company;
+        if (! $request->exists('currency')) {
+            $request->merge(['currency' => $company->currency]);
+        }
+
+        if (! $request->exists('discount_value') && $request->exists('discount')) {
+            $request->merge(['discount_value' => $request->input('discount')]);
+        }
+
         $validated = $request->validate([
             'type' => ['required', Rule::in(['purchase', 'sale'])],
             'status' => ['sometimes', Rule::in(['confirmed', 'draft'])],
+            'currency' => ['required', 'string', 'max:20', 'regex:/\S/'],
+            'discount_type' => ['sometimes', Rule::in(['fixed', 'percentage'])],
+            'discount_value' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'party_id' => [
                 'nullable',
                 Rule::exists('parties', 'id')->where('company_id', $company->id),
             ],
             'document_no' => ['nullable', 'string', 'max:255'],
             'date' => ['required', 'date'],
-            'discount' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => [
                 'required',
@@ -97,6 +111,8 @@ class MovementController extends Controller
             'items.*.item_shape' => ['nullable', 'string', 'max:255'],
         ]);
         $validated['status'] = $validated['status'] ?? 'confirmed';
+        $validated['discount_type'] = $validated['discount_type'] ?? 'fixed';
+        $validated['currency'] = trim($validated['currency']);
         $validated['party_id'] = $validated['party_id'] ?? null;
         $validated['document_no'] = $validated['document_no'] ?? null;
 
@@ -116,17 +132,25 @@ class MovementController extends Controller
             'total_line' => round((float) $item['quantity'] * (float) $item['price_unit'], 2),
         ]);
         $subtotal = round($items->sum('total_line'), 2);
-        $discount = round((float) $validated['discount'], 2);
+        $discountValue = round((float) $validated['discount_value'], 2);
 
         if ($items->contains(fn (array $item) => $item['total_line'] > 9999999999.99) || $subtotal > 9999999999.99) {
             throw ValidationException::withMessages(['items' => 'إجمالي أحد الأسطر أو الفاتورة يتجاوز الحد المسموح.']);
         }
 
-        if ($discount > $subtotal) {
-            throw ValidationException::withMessages(['discount' => 'يجب ألا يتجاوز الخصم إجمالي الفاتورة.']);
+        if ($validated['discount_type'] === 'percentage' && $discountValue > 100) {
+            throw ValidationException::withMessages(['discount_value' => 'يجب ألا تتجاوز نسبة الخصم 100%.']);
         }
 
-        $movement = DB::transaction(function () use ($company, $validated, $items, $subtotal, $discount) {
+        $discountAmount = $validated['discount_type'] === 'percentage'
+            ? round($subtotal * $discountValue / 100, 2)
+            : $discountValue;
+
+        if ($discountAmount > $subtotal) {
+            throw ValidationException::withMessages(['discount_value' => 'يجب ألا يتجاوز الخصم إجمالي الفاتورة.']);
+        }
+
+        $movement = DB::transaction(function () use ($company, $validated, $items, $subtotal, $discountValue, $discountAmount) {
             Companie::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
             $productIds = $items->pluck('product_id')->unique()->values();
             $products = Product::query()
@@ -148,11 +172,15 @@ class MovementController extends Controller
                 'party_id' => $validated['party_id'] ?: null,
                 'type' => $validated['type'],
                 'number' => $number,
+                'currency' => $validated['currency'],
                 'document_no' => $validated['document_no'] ?: null,
                 'date' => $validated['date'],
                 'status' => $validated['status'],
-                'discount' => $discount,
-                'total' => round($subtotal - $discount, 2),
+                'discount_type' => $validated['discount_type'],
+                'discount_value' => $discountValue,
+                'discount_amount' => $discountAmount,
+                'discount' => $discountAmount,
+                'total' => round($subtotal - $discountAmount, 2),
             ]);
 
             foreach ($items as $item) {
@@ -183,7 +211,7 @@ class MovementController extends Controller
     public function show(Request $request, int $movement): View
     {
         $movement = $request->user()->company->movements()
-            ->with(['party', 'items.product'])
+            ->with(['company', 'party', 'items.product'])
             ->findOrFail($movement);
 
         return view('movements.show', compact('movement'));
@@ -192,7 +220,7 @@ class MovementController extends Controller
     public function exportInvoicePdf(Request $request, int $movement, MovementPdfService $pdfService): Response
     {
         $movement = $request->user()->company->movements()
-            ->with(['party', 'items.product'])
+            ->with(['company', 'party', 'items.product'])
             ->findOrFail($movement);
 
         return $pdfService->invoice($movement);
@@ -282,7 +310,7 @@ class MovementController extends Controller
     private function filteredMovements(Request $request, array $filters): HasMany
     {
         return $request->user()->company->movements()
-            ->with('party')
+            ->with(['party', 'company'])
             ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
             ->when($filters['status'] ?? null, fn ($query, $status) => $query->where('status', $status))
             ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))

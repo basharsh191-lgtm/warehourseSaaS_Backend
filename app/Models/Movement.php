@@ -8,11 +8,18 @@ class Movement extends Model
 {
     protected $guarded = [];
 
+    public function getCurrencyAttribute(?string $value): string
+    {
+        return $value ?: ($this->company?->currency ?? 'USD');
+    }
+
     protected function casts(): array
     {
         return [
             'date' => 'date',
             'discount' => 'decimal:2',
+            'discount_value' => 'decimal:2',
+            'discount_amount' => 'decimal:2',
             'total' => 'decimal:2',
         ];
     }

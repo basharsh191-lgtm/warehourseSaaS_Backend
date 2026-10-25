@@ -129,14 +129,24 @@ test('company settings update contact details and store a company logo', functio
         'phone' => '0501234567',
         'email' => 'office@example.com',
         'address' => 'الرياض، المملكة العربية السعودية',
+        'currency' => 'SAR',
         'logo' => $logo,
     ])->assertRedirect(route('settings.index', ['tab' => 'company']));
+
+    $this->from(route('settings.index', ['tab' => 'company']))
+        ->put(route('settings.company.update', ['tab' => 'company']), [
+            'name' => 'شركة محدثة',
+            'currency' => 'INVALID',
+        ])
+        ->assertRedirect(route('settings.index', ['tab' => 'company']))
+        ->assertSessionHasErrors('currency');
 
     $company = $this->company->fresh();
     expect($company->name)->toBe('شركة محدثة')
         ->and($company->phone)->toBe('0501234567')
         ->and($company->email)->toBe('office@example.com')
         ->and($company->address)->toBe('الرياض، المملكة العربية السعودية')
+        ->and($company->currency)->toBe('SAR')
         ->and($company->logo_path)->not->toBeNull();
 
     Storage::disk('public')->assertExists($company->logo_path);
@@ -199,6 +209,8 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
 
     $purchase = \App\Models\Movement::query()->firstOrFail();
     expect((float) $purchase->total)->toBe(20.0)
+        ->and((float) $purchase->discount_value)->toBe(5.0)
+        ->and((float) $purchase->discount_amount)->toBe(5.0)
         ->and($purchase->items()->firstOrFail()->item_shape)->toBe('شكل مخصص للفاتورة')
         ->and((float) Operation::query()->sum('in_qty'))->toBe(2.5);
     $this->get(route('movements.show', $purchase))
@@ -228,6 +240,84 @@ test('purchase invoices increase stock and sale invoices cannot exceed available
         ->assertSessionHasErrors('items');
 
     expect((float) Operation::query()->sum('in_qty') - (float) Operation::query()->sum('out_qty'))->toBe(1.25);
+});
+
+test('percentage invoice discounts are calculated and persisted separately from their input value', function () {
+    $product = Product::create([
+        'company_id' => $this->company->id,
+        'name' => 'مادة الخصم النسبي',
+        'unit' => 'قطعة',
+        'price_sale_custom' => null,
+        'is_active' => true,
+    ]);
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'date' => now()->toDateString(),
+        'discount_value' => 0,
+        'items' => [['product_id' => $product->id, 'quantity' => 10, 'price_unit' => 10]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $this->post(route('movements.store'), [
+        'type' => 'sale',
+        'date' => now()->toDateString(),
+        'discount_type' => 'percentage',
+        'discount_value' => '12.5',
+        'items' => [['product_id' => $product->id, 'quantity' => 2, 'price_unit' => 20]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $sale = Movement::query()->where('type', 'sale')->firstOrFail();
+    expect($sale->discount_type)->toBe('percentage')
+        ->and((float) $sale->discount_value)->toBe(12.5)
+        ->and((float) $sale->discount_amount)->toBe(5.0)
+        ->and((float) $sale->discount)->toBe(5.0)
+        ->and((float) $sale->total)->toBe(35.0);
+
+    $this->get(route('movements.show', $sale))
+        ->assertOk()
+        ->assertSee('12.50%')
+        ->assertSee('35.00 USD');
+
+    $this->from(route('movements.create'))
+        ->post(route('movements.store'), [
+            'type' => 'sale',
+            'date' => now()->toDateString(),
+            'discount_type' => 'percentage',
+            'discount_value' => 100.01,
+            'items' => [['product_id' => $product->id, 'quantity' => 1, 'price_unit' => 20]],
+        ])
+        ->assertRedirect(route('movements.create'))
+        ->assertSessionHasErrors('discount_value');
+});
+
+test('invoice currency can be entered manually without changing the company default', function () {
+    $product = Product::create([
+        'company_id' => $this->company->id,
+        'name' => 'مادة بعملة مخصصة',
+        'unit' => 'قطعة',
+        'price_sale_custom' => null,
+        'is_active' => true,
+    ]);
+
+    $this->get(route('movements.create'))
+        ->assertOk()
+        ->assertSee('name="currency"', false)
+        ->assertSee('كتابة يدوية');
+
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'date' => now()->toDateString(),
+        'currency' => 'د.ك',
+        'discount_value' => 0,
+        'items' => [['product_id' => $product->id, 'quantity' => 1, 'price_unit' => 10]],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    $movement = Movement::query()->firstOrFail();
+    expect($movement->currency)->toBe('د.ك')
+        ->and($this->company->fresh()->currency)->toBe('USD');
+
+    $this->get(route('movements.show', $movement))
+        ->assertOk()
+        ->assertSee('10.00 د.ك');
 });
 
 test('draft invoices do not change stock until confirmed', function () {

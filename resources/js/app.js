@@ -3,7 +3,7 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
-Alpine.data('movementForm', (products, markup, parties, initialItems, initialValues) => {
+Alpine.data('movementForm', (products, markup, parties, initialItems, initialValues, defaultCurrency) => {
     const rows = initialItems.map((item) => {
         const product = products.find((entry) => Number(entry.id) === Number(item.product_id));
         return {
@@ -21,14 +21,24 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
     products,
     markup,
     parties,
+    currencyPreset: ['USD', 'EUR', 'SYP', 'SAR', 'AED'].includes(initialValues.currency)
+        ? initialValues.currency
+        : 'custom',
+    currencyCustom: ['USD', 'EUR', 'SYP', 'SAR', 'AED'].includes(initialValues.currency)
+        ? ''
+        : (initialValues.currency || defaultCurrency || ''),
     type: initialValues.type || 'sale',
     partyId: initialValues.partyId || '',
     status: initialValues.status || 'confirmed',
     search: '',
     items: rows,
-    discount: Number(initialValues.discount) || 0,
+    discountType: initialValues.discountType || 'fixed',
+    discountValue: Number(initialValues.discountValue) || 0,
     submitting: false,
     error: '',
+    get currency() {
+        return this.currencyPreset === 'custom' ? this.currencyCustom.trim() : this.currencyPreset;
+    },
     get filteredProducts() {
         const term = this.search.trim().toLocaleLowerCase();
 
@@ -74,10 +84,18 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
         });
     },
     get subtotal() {
-        return this.items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.price_unit) || 0), 0);
+        return Math.round(this.items.reduce((sum, item) => sum + this.lineTotal(item), 0) * 100) / 100;
+    },
+    lineTotal(item) {
+        return Math.round((Number(item.quantity) || 0) * (Number(item.price_unit) || 0) * 100) / 100;
     },
     get total() {
-        return Math.max(0, this.subtotal - (Number(this.discount) || 0));
+        return Math.max(0, this.subtotal - this.discountAmount);
+    },
+    get discountAmount() {
+        const value = Number(this.discountValue) || 0;
+        const amount = this.discountType === 'percentage' ? this.subtotal * value / 100 : value;
+        return Math.min(this.subtotal, Math.round(amount * 100) / 100);
     },
     addBlankItem() {
         this.items.push({ product_id: '', quantity: 1, price_unit: 0, item_shape: '', name: '', barcode: '', stock: 0 });
@@ -135,13 +153,25 @@ Alpine.data('movementForm', (products, markup, parties, initialItems, initialVal
     submitForm(event) {
         this.error = '';
 
+        if (!this.currency) {
+            this.error = 'اختر العملة أو أدخل رمزها يدوياً.';
+            return;
+        }
+
         if (!this.items.length || this.items.some((item) => !item.product_id || Number(item.quantity) <= 0 || Number(item.price_unit) < 0)) {
             this.error = 'أضف مادة واحدة على الأقل، وتأكد من اختيار المادة وإدخال كمية وسعر صالحين.';
             return;
         }
 
-        if (Number(this.discount) < 0 || Number(this.discount) > this.subtotal) {
-            this.error = 'يجب ألا يتجاوز الخصم إجمالي الفاتورة.';
+        const discountValue = Number(this.discountValue);
+        if (
+            discountValue < 0
+            || (this.discountType === 'percentage' && discountValue > 100)
+            || (this.discountType === 'fixed' && discountValue > this.subtotal)
+        ) {
+            this.error = this.discountType === 'percentage'
+                ? 'يجب أن تكون نسبة الخصم بين 0 و100%.'
+                : 'يجب ألا يتجاوز الخصم إجمالي الفاتورة.';
             return;
         }
 

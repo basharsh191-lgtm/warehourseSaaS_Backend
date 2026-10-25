@@ -91,7 +91,7 @@
                                 </td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $movement->date?->format('Y-m-d') ?? '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $movement->party?->name ?? 'نقدي مباشر' }}</td>
-                                <td class="whitespace-nowrap px-5 py-4 font-semibold tabular-nums text-slate-900 dark:text-slate-100">{{ number_format((float) $movement->total, 2) }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 font-semibold tabular-nums text-slate-900 dark:text-slate-100">{{ number_format((float) $movement->total, 2) }} {{ $movement->currency ?: $currency }}</td>
                                 <td class="whitespace-nowrap px-5 py-4"><span @class(['inline-flex rounded-full px-2.5 py-1 text-xs font-semibold', 'status-badge' => $movement->status === 'confirmed', 'bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300' => $movement->status === 'draft', 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300' => $movement->status === 'cancelled'])>{{ ['confirmed' => 'مؤكدة', 'draft' => 'مسودة', 'cancelled' => 'ملغاة'][$movement->status] ?? $movement->status }}</span></td>
                                 <td class="whitespace-nowrap px-5 py-4 text-left"><a href="{{ route('movements.show', $movement) }}" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 dark:border-slate-700 dark:text-slate-200 dark:hover:border-emerald-700 dark:hover:text-emerald-300">عرض الفاتورة</a></td>
                             </tr>

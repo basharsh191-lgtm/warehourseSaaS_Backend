@@ -19,14 +19,14 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('movements.store') }}" x-data="movementForm(@js($productsPayload), @js((float) ($company->percent_markup ?? 200)), @js($parties->map(fn ($party) => ['id' => $party->id, 'name' => $party->name, 'type' => $party->type])->values()), @js(old('items', [])), @js(['type' => old('type', 'sale'), 'partyId' => old('party_id', ''), 'discount' => old('discount', 0), 'status' => old('status', 'confirmed')]))" @submit.prevent="submitForm($event)" class="space-y-6">
+    <form method="POST" action="{{ route('movements.store') }}" x-data="movementForm(@js($productsPayload), @js((float) ($company->percent_markup ?? 200)), @js($parties->map(fn ($party) => ['id' => $party->id, 'name' => $party->name, 'type' => $party->type])->values()), @js(old('items', [])), @js(['type' => old('type', 'sale'), 'partyId' => old('party_id', ''), 'currency' => old('currency', $company->currency), 'discountType' => old('discount_type', 'fixed'), 'discountValue' => old('discount_value', old('discount', 0)), 'status' => old('status', 'confirmed')]), @js($company->currency))" @submit.prevent="submitForm($event)" class="space-y-6">
         @csrf
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div class="mb-5">
                 <h2 class="font-bold text-slate-900 dark:text-white">بيانات الحركة</h2>
                 <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">حدّد نوع الفاتورة والجهة المرتبطة بها.</p>
             </div>
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">نوع الحركة</span>
                     <select name="type" x-model="type" @change="changeType()" required class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                         <option value="sale" @selected(old('type', 'sale') === 'sale')>فاتورة بيع</option><option value="purchase" @selected(old('type') === 'purchase')>فاتورة شراء</option>
@@ -41,6 +41,23 @@
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">رقم المستند</span><input type="text" name="document_no" value="{{ old('document_no') }}" maxlength="255" placeholder="رقم فاتورة المورد (اختياري)" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">التاريخ</span><input type="date" name="date" value="{{ old('date', now()->toDateString()) }}" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
                 <label class="block"><span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">حالة الفاتورة</span><select name="status" x-model="status" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="confirmed">تأكيد الفاتورة وتحديث المخزون</option><option value="draft">حفظ كمسودة دون تحديث المخزون</option></select></label>
+                <div class="block">
+                    <label for="invoice-currency" class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">عملة هذه الفاتورة</label>
+                    <select id="invoice-currency" x-model="currencyPreset" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                        <option value="USD">USD — دولار أمريكي</option>
+                        <option value="EUR">EUR — يورو</option>
+                        <option value="SYP">SYP — ليرة سورية</option>
+                        <option value="SAR">SAR — ريال سعودي</option>
+                        <option value="AED">AED — درهم إماراتي</option>
+                        <option value="custom">عملة أخرى — كتابة يدوية</option>
+                    </select>
+                    <input type="hidden" name="currency" :value="currency">
+                    <label x-cloak x-show="currencyPreset === 'custom'" class="mt-2 block">
+                        <span class="sr-only">اكتب رمز أو اسم العملة</span>
+                        <input type="text" x-model="currencyCustom" maxlength="20" placeholder="اكتب رمز أو اسم العملة" :required="currencyPreset === 'custom'" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                    </label>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">يمكن اختيار عملة شائعة أو كتابة رمز مخصص لهذه الفاتورة.</p>
+                </div>
             </div>
         </section>
 
@@ -76,8 +93,8 @@
                                 </td>
                                 <td class="whitespace-nowrap px-4 py-3"><span x-show="type === 'sale'" :class="item.quantity > item.stock ? 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300' : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'" class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold" x-text="item.stock + ' متاح'"></span><span x-show="type !== 'sale'" class="text-xs text-slate-400">غير مطلوب</span></td>
                                 <td class="px-4 py-3"><input type="number" min="0.001" step="0.001" max="999999999.999" x-model.number="item.quantity" :name="'items[' + index + '][quantity]'" required class="w-28 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></td>
-                                <td class="px-4 py-3"><input type="number" min="0" step="0.01" x-model.number="item.price_unit" :name="'items[' + index + '][price_unit]'" required class="w-32 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></td>
-                                <td class="whitespace-nowrap px-4 py-3 font-bold tabular-nums text-slate-900 dark:text-slate-100" x-text="((Number(item.quantity) || 0) * (Number(item.price_unit) || 0)).toFixed(2)"></td>
+                                <td class="px-4 py-3"><div class="flex items-center gap-2"><input type="number" min="0" step="0.01" x-model.number="item.price_unit" :name="'items[' + index + '][price_unit]'" required class="w-32 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><span class="text-xs text-slate-500" x-text="currency"></span></div></td>
+                                <td class="whitespace-nowrap px-4 py-3 font-bold tabular-nums text-slate-900 dark:text-slate-100" x-text="lineTotal(item).toFixed(2) + ' ' + currency"></td>
                                 <td class="px-4 py-3"><button type="button" @click="removeItem(index)" class="rounded-lg p-2 text-rose-500 transition hover:bg-rose-50 dark:hover:bg-rose-950/50" :aria-label="'حذف السطر ' + (index + 1)"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M5 7l1 13h12l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button></td>
                             </tr>
                         </template>
@@ -89,9 +106,11 @@
 
         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
             <div class="ml-auto max-w-lg space-y-4">
-                <div class="flex items-center justify-between text-sm"><span class="text-slate-500 dark:text-slate-400">الإجمالي الفرعي</span><span class="font-semibold tabular-nums text-slate-900 dark:text-white" x-text="subtotal.toFixed(2)"></span></div>
-                <label class="flex items-center justify-between gap-4 text-sm"><span class="font-medium text-slate-600 dark:text-slate-300">خصم الفاتورة</span><input type="number" name="discount" x-model.number="discount" min="0" step="0.01" :max="subtotal" value="{{ old('discount', 0) }}" class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"></label>
-                <div class="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700"><span class="font-bold text-slate-900 dark:text-white">الصافي المستحق</span><span class="text-xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400" x-text="total.toFixed(2)"></span></div>
+                <div class="flex items-center justify-between text-sm"><span class="text-slate-500 dark:text-slate-400">الإجمالي الفرعي</span><span class="font-semibold tabular-nums text-slate-900 dark:text-white" x-text="subtotal.toFixed(2) + ' ' + currency"></span></div>
+                <label class="flex items-center justify-between gap-4 text-sm"><span class="font-medium text-slate-600 dark:text-slate-300">نوع الخصم</span><select name="discount_type" x-model="discountType" class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><option value="fixed">مبلغ ثابت</option><option value="percentage">نسبة مئوية</option></select></label>
+                <label class="flex items-center justify-between gap-4 text-sm"><span class="font-medium text-slate-600 dark:text-slate-300">قيمة الخصم</span><span class="flex items-center gap-2"><input type="number" name="discount_value" x-model.number="discountValue" min="0" step="0.01" :max="discountType === 'percentage' ? 100 : subtotal" class="w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm tabular-nums text-slate-900 outline-none focus:border-emerald-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"><span class="text-xs text-slate-500" x-text="discountType === 'percentage' ? '%' : currency"></span></span></label>
+                <div class="flex items-center justify-between text-sm"><span class="text-slate-500 dark:text-slate-400">قيمة الخصم المحتسبة</span><span class="font-semibold tabular-nums text-slate-900 dark:text-white" x-text="discountAmount.toFixed(2) + ' ' + currency"></span></div>
+                <div class="flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-700"><span class="font-bold text-slate-900 dark:text-white">الصافي المستحق</span><span class="text-xl font-extrabold tabular-nums text-emerald-700 dark:text-emerald-400" x-text="total.toFixed(2) + ' ' + currency"></span></div>
                 <p class="text-xs text-slate-500 dark:text-slate-400">يتم احتساب الإجمالي تلقائياً. الفاتورة المسودة لا تؤثر على المخزون حتى تأكيدها.</p>
             </div>
             <div class="mt-6 flex flex-col-reverse justify-end gap-3 border-t border-slate-100 pt-5 dark:border-slate-800 sm:flex-row">

@@ -166,6 +166,15 @@
                             <input type="email" name="email" value="{{ old('email', $company->email) }}" maxlength="255" autocomplete="email" dir="ltr" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-indigo-900/40">
                             @error('email')<span class="mt-1 block text-xs text-rose-600">{{ $message }}</span>@enderror
                         </label>
+                        <label class="block">
+                            <span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">عملة الشركة <span class="text-rose-500">*</span></span>
+                            <select name="currency" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-indigo-900/40">
+                                @foreach (['USD' => 'USD — دولار أمريكي', 'EUR' => 'EUR — يورو', 'SYP' => 'SYP — ليرة سورية', 'SAR' => 'SAR — ريال سعودي', 'AED' => 'AED — درهم إماراتي'] as $code => $label)
+                                    <option value="{{ $code }}" @selected(old('currency', $company->currency) === $code)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('currency')<span class="mt-1 block text-xs text-rose-600">{{ $message }}</span>@enderror
+                        </label>
                         <label class="block sm:col-span-2">
                             <span class="mb-1.5 block text-sm font-semibold text-slate-700 dark:text-slate-200">العنوان</span>
                             <textarea name="address" rows="3" maxlength="1000" autocomplete="street-address" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-indigo-900/40">{{ old('address', $company->address) }}</textarea>
