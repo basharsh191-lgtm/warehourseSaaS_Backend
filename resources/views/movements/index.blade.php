@@ -10,7 +10,17 @@
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">راجع فواتير الشراء والبيع والمرتجعات.</p>
         </div>
         <div class="flex flex-wrap gap-3">
-            <a href="{{ route('movements.export.pdf', request()->query()) }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">تصدير التقرير PDF</a>
+            <a href="{{ route('movements.export.excel', request()->query()) }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">تصدير الحركات Excel</a>
+            <form method="POST" action="{{ route('movements.export.pdf') }}">
+                @csrf
+                @foreach (['search', 'type', 'status', 'party_id', 'date', 'from_date', 'to_date'] as $filter)
+                    @if (request()->filled($filter))
+                        <input type="hidden" name="{{ $filter }}" value="{{ request($filter) }}">
+                    @endif
+                @endforeach
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">إعداد تقرير PDF</button>
+            </form>
+            <a href="{{ route('reports.index') }}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">تقارير PDF</a>
             <a href="{{ route('movements.create') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 إنشاء فاتورة

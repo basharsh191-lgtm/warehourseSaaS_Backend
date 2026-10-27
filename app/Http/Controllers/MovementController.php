@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateReportPdfJob;
 use App\Models\Companie;
 use App\Models\Movement;
 use App\Models\MovementItems;
 use App\Models\Operation;
 use App\Models\Product;
+use App\Models\ReportExport;
 use App\Services\MovementPdfService;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Rap2hpoutre\FastExcel\FastExcel;
 
 class MovementController extends Controller
 {
@@ -35,12 +38,61 @@ class MovementController extends Controller
         ]);
     }
 
-    public function exportPdf(Request $request, MovementPdfService $pdfService): Response
+    public function exportPdf(Request $request): RedirectResponse
     {
         $filters = $this->validatedFilters($request);
-        $movements = $this->filteredMovements($request, $filters)->get();
+        $report = ReportExport::query()->create([
+            'company_id' => $request->user()->company_id,
+            'user_id' => $request->user()->id,
+            'status' => 'pending',
+            'filters' => $filters,
+        ]);
 
-        return $pdfService->report($movements, $request->user()->company->currency);
+        GenerateReportPdfJob::dispatch($report->id);
+
+        return redirect()
+            ->route('reports.index')
+            ->with('success', 'تمت إضافة التقرير إلى قائمة المعالجة، وسيظهر هنا عند جاهزيته.');
+    }
+
+    public function exportExcel(Request $request, FastExcel $fastExcel): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $filters = $this->validatedFilters($request);
+        $operations = $request->user()->company->operations()
+            ->with(['movement', 'party', 'product'])
+            ->when($filters['type'] ?? null, fn ($query, $type) => $query->where('type', $type))
+            ->when($filters['party_id'] ?? null, fn ($query, $partyId) => $query->where('party_id', $partyId))
+            ->when($filters['date'] ?? null, fn ($query, $date) => $query->whereDate('date', $date))
+            ->when($filters['from_date'] ?? null, fn ($query, $date) => $query->whereDate('date', '>=', $date))
+            ->when($filters['to_date'] ?? null, fn ($query, $date) => $query->whereDate('date', '<=', $date))
+            ->when($filters['status'] ?? null, fn ($query, $status) => $query->whereHas('movement', fn ($movementQuery) => $movementQuery->where('status', $status)))
+            ->when(
+                isset($filters['search']) && $filters['search'] !== '',
+                function ($query) use ($filters) {
+                    $search = trim($filters['search']);
+                    $query->whereHas('movement', fn ($movementQuery) => $movementQuery
+                        ->where('number', 'like', "%{$search}%")
+                        ->orWhere('document_no', 'like', "%{$search}%"));
+                }
+            )
+            ->latest('date')
+            ->latest('id')
+            ->lazy(500);
+
+        return $fastExcel->escapeFormulas()->data($operations)->download('movements.xlsx', fn (Operation $operation) => [
+            'رقم الحركة' => $operation->movement?->number,
+            'رقم المستند' => $operation->movement?->document_no,
+            'نوع الحركة' => $operation->type,
+            'التاريخ' => $operation->date,
+            'الطرف' => $operation->party?->name,
+            'المادة' => $operation->product?->name,
+            'الباركود' => $operation->product?->barcode,
+            'الوارد' => (float) $operation->in_qty,
+            'الصادر' => (float) $operation->out_qty,
+            'سعر الوحدة' => (float) $operation->price_unit,
+            'القيمة' => (float) $operation->value_net,
+            'حالة الفاتورة' => $operation->movement?->status,
+        ]);
     }
 
     public function create(Request $request): View

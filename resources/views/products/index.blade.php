@@ -9,12 +9,15 @@
             <h1 class="mt-1 text-2xl font-bold text-slate-900 dark:text-white">المواد</h1>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">تابع المواد والباركود والوحدات وحدود المخزون.</p>
         </div>
-        <a href="{{ route('products.create') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            إضافة مادة
-        </a>
+        <div class="flex flex-wrap gap-3">
+            <a href="{{ route('products.export.excel') }}" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">تصدير Excel</a>
+            <a href="{{ route('products.create') }}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                إضافة مادة
+            </a>
+        </div>
     </div>
 
     @if ($errors->any())
@@ -26,6 +29,33 @@
             </ul>
         </div>
     @endif
+
+    @if (session('import_errors'))
+        <div class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="status">
+            <p class="font-semibold">الصفوف التي تم تخطيها:</p>
+            <ul class="mt-2 list-inside list-disc space-y-1">
+                @foreach (session('import_errors') as $importError)
+                    <li>الصف {{ $importError['row'] }}: {{ implode('، ', $importError['messages']) }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <section class="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 class="font-bold text-slate-900 dark:text-white">استيراد مواد من Excel أو CSV</h2>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            استخدم الأعمدة: name, barcode, category, unit, price, initial_quantity.
+            السعر هو سعر البيع، وتُسجّل الكمية الأولية كرصيد افتتاحي دون قيمة تكلفة.
+        </p>
+        <form method="POST" action="{{ route('products.import') }}" enctype="multipart/form-data" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+            @csrf
+            <div class="flex-1">
+                <label for="product_import_file" class="mb-2 block text-sm font-semibold">ملف الاستيراد (CSV / ODS / XLSX، حتى 10MB)</label>
+                <input id="product_import_file" name="file" type="file" accept=".csv,.ods,.xlsx" required class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-950">
+            </div>
+            <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">استيراد المواد</button>
+        </form>
+    </section>
 
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">

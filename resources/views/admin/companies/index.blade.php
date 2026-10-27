@@ -65,7 +65,17 @@
                             </td>
                             <td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ number_format((float) $company->percent_markup, 2) }}%</td>
                             <td class="px-5 py-4 text-slate-600 dark:text-slate-300">{{ number_format($company->users_count) }}</td>
-                            <td class="px-5 py-4"><a href="{{ route('admin.companies.edit', $company) }}" class="inline-flex rounded-lg border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950">تعديل</a></td>
+                            <td class="px-5 py-4">
+                                <div class="flex flex-wrap gap-2">
+                                    <a href="{{ route('admin.companies.edit', $company) }}" class="inline-flex rounded-lg border border-indigo-200 px-3 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-50 dark:border-indigo-900 dark:text-indigo-300 dark:hover:bg-indigo-950">تعديل</a>
+                                    @if ($company->status !== 'suspended')
+                                        <form method="POST" action="{{ route('admin.companies.terminate-subscription', $company) }}" onsubmit="return confirm('هل تريد إنهاء اشتراك هذه الشركة وإيقافها فوراً؟')">
+                                            @csrf
+                                            <button type="submit" class="inline-flex rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950">إنهاء الاشتراك</button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr><td colspan="7" class="px-5 py-10 text-center text-slate-500 dark:text-slate-400">لا توجد شركات مسجلة.</td></tr>

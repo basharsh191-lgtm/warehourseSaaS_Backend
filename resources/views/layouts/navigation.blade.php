@@ -165,6 +165,18 @@
                     <span>الفواتير</span>
                 </a>
 
+                {{-- تقارير PDF --}}
+                <a
+                    href="{{ route('reports.index') }}"
+                    @class([
+                        'app-sidebar-link relative flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
+                        'is-active text-white shadow-md shadow-emerald-900/10 before:absolute before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-white before:[inset-inline-start:0]' => request()->routeIs('reports.*'),
+                        'text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/70 dark:hover:text-white' => !request()->routeIs('reports.*'),
+                    ])
+                >
+                    <span>تقارير PDF</span>
+                </a>
+
                 {{-- الإعدادات --}}
                 <a
                     href="{{ route('settings.index') }}"

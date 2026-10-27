@@ -21,6 +21,20 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Background reports and spreadsheet data
+
+Run the database queue worker in each application environment to process large PDF reports:
+
+```bash
+php artisan queue:work --tries=3 --timeout=300
+```
+
+The default queue connection is `database`; run database migrations before starting the worker. Generated reports are stored on Laravel's private `local` disk and are downloadable from the **تقارير PDF** page by users in the requesting company.
+
+Product imports accept `.csv`, `.ods`, and `.xlsx` files up to 10 MB. Include the headers `name`, `barcode`, `category`, `unit`, `price`, and `initial_quantity`. Blank category, barcode, price, and initial quantity values are allowed. The `price` column updates the selling price; imported opening quantities are recorded as stock movements without an assumed acquisition cost. Existing or repeated barcodes and invalid rows are skipped and reported.
+
+The performance indexes are applied by the migration `2026_10_25_000001_add_multitenant_performance_indexes`.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.

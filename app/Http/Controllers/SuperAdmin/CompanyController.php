@@ -75,4 +75,16 @@ class CompanyController extends Controller
             ->route('admin.companies.edit', $company)
             ->with('success', 'تم تمديد الفترة التجريبية وتحديث حالة الشركة.');
     }
+
+    public function terminateSubscription(Companie $company): RedirectResponse
+    {
+        $company->update([
+            'trial_ends_at' => now()->toDateString(),
+            'status' => 'suspended',
+        ]);
+
+        return redirect()
+            ->route('admin.companies.index')
+            ->with('success', 'تم إنهاء الفترة التجريبية أو الاشتراك وإيقاف الشركة بنجاح.');
+    }
 }

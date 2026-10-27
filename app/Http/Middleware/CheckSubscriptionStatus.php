@@ -24,7 +24,7 @@ class CheckSubscriptionStatus
 
         if (
             $company?->status === 'trial'
-            && $company->trial_ends_at?->isBefore(today())
+            && $company->trial_ends_at?->isBefore(now())
         ) {
             $company->update(['status' => 'suspended']);
         }

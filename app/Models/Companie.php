@@ -13,7 +13,7 @@ class Companie extends Model
         return static::query()
             ->where('status', 'trial')
             ->whereNotNull('trial_ends_at')
-            ->whereDate('trial_ends_at', '<', today())
+            ->where('trial_ends_at', '<', now())
             ->update([
                 'status' => 'suspended',
                 'updated_at' => now(),

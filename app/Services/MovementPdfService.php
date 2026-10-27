@@ -16,14 +16,22 @@ class MovementPdfService
         return $this->makePdf($html, "invoice-{$movement->number}.pdf", 'inline');
     }
 
-    public function report(Collection $movements, string $currency): Response
+    public function reportContent(Collection $movements, string $currency): string
     {
         $html = view('pdf.movements.report', compact('movements', 'currency'))->render();
 
-        return $this->makePdf($html, 'invoices-report.pdf', 'attachment');
+        return $this->makePdfContent($html, 'invoices-report.pdf');
     }
 
-    private function makePdf(string $html, string $filename, string $disposition): Response
+    private function makePdf(string $html, string $filename, string $disposition): \Illuminate\Http\Response
+    {
+        return response($this->makePdfContent($html, $filename), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
+        ]);
+    }
+
+    private function makePdfContent(string $html, string $filename): string
     {
         $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator(config('app.name'));
@@ -37,9 +45,6 @@ class MovementPdfService
         $pdf->AddPage();
         $pdf->writeHTML($html, true, false, true, false, '');
 
-        return response($pdf->Output($filename, 'S'), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
-        ]);
+        return $pdf->Output($filename, 'S');
     }
 }

@@ -123,6 +123,43 @@ test('super admin can extend a company trial by the requested number of days', f
         ->and($company->fresh()->trial_ends_at->toDateString())->toBe($startDate->addDays(14)->toDateString());
 });
 
+test('super admin can immediately terminate a company subscription', function () {
+    $company = createDashboardCompany([
+        'trial_ends_at' => today()->addDays(14),
+    ]);
+
+    $this->actingAs(createSuperAdmin())
+        ->post(route('admin.companies.terminate-subscription', $company))
+        ->assertRedirect(route('admin.companies.index'))
+        ->assertSessionHas('success');
+
+    expect($company->fresh()->status)->toBe('suspended')
+        ->and($company->fresh()->trial_ends_at->toDateString())->toBe(today()->toDateString());
+});
+
+test('subscription check command suspends expired trials only', function () {
+    $this->travelTo(today()->setTime(12, 0));
+
+    $expiredTrial = createDashboardCompany([
+        'trial_ends_at' => today(),
+    ]);
+    $futureTrial = createDashboardCompany([
+        'trial_ends_at' => today()->addDay(),
+    ]);
+    $activeCompany = createDashboardCompany([
+        'status' => 'active',
+        'trial_ends_at' => today()->subDay(),
+    ]);
+
+    $this->artisan('subscriptions:check-expiring')
+        ->expectsOutput('Suspended 1 expired trial(s).')
+        ->assertSuccessful();
+
+    expect($expiredTrial->fresh()->status)->toBe('suspended')
+        ->and($futureTrial->fresh()->status)->toBe('trial')
+        ->and($activeCompany->fresh()->status)->toBe('active');
+});
+
 test('company edit page shows remaining trial days', function () {
     $company = createDashboardCompany([
         'trial_ends_at' => today()->addDays(5),

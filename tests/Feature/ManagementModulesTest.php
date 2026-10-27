@@ -1,15 +1,18 @@
 <?php
 
+use App\Jobs\GenerateReportPdfJob;
 use App\Models\Companie;
 use App\Models\Movement;
 use App\Models\Operation;
 use App\Models\Partie;
 use App\Models\Product;
+use App\Models\ReportExport;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -371,7 +374,7 @@ test('draft invoices do not change stock until confirmed', function () {
         ->and(Operation::query()->where('movement_id', $draft->id)->count())->toBe(1);
 });
 
-test('invoice filters and PDF exports use the same company-scoped criteria', function () {
+test('invoice filters and queued PDF reports use the same company-scoped criteria', function () {
     $customer = Partie::create([
         'company_id' => $this->company->id,
         'name' => 'عميل التقرير',
@@ -425,11 +428,16 @@ test('invoice filters and PDF exports use the same company-scoped criteria', fun
         ->assertDontSee('#502')
         ->assertDontSee('#503');
 
-    $report = $this->get(route('movements.export.pdf', $filters))
-        ->assertOk()
-        ->assertHeader('Content-Type', 'application/pdf')
-        ->assertHeader('Content-Disposition', 'attachment; filename="invoices-report.pdf"');
-    $this->assertStringStartsWith('%PDF', $report->getContent());
+    Queue::fake();
+    $this->post(route('movements.export.pdf'), $filters)
+        ->assertRedirect(route('reports.index'));
+
+    $report = ReportExport::query()->firstOrFail();
+    $reportFilters = $report->filters;
+    ksort($reportFilters);
+    ksort($filters);
+    expect($reportFilters)->toBe($filters);
+    Queue::assertPushed(GenerateReportPdfJob::class);
 
     $invoice = $this->get(route('movements.pdf', $matching))
         ->assertOk()
