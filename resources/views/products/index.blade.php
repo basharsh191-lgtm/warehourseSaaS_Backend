@@ -20,6 +20,14 @@
         </div>
     </div>
 
+    @if ($lowStockCount > 0)
+        <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="status">
+            <p class="font-bold">مواد عند الحد الأدنى أو أقل: {{ $lowStockCount }}</p>
+            <p class="mt-1">راجع الكمية الحالية قبل تسجيل فواتير بيع جديدة لهذه المواد.</p>
+        <a href="{{ route('products.index', ['low_stock' => 1]) }}" class="mt-2 inline-flex font-semibold underline underline-offset-2">عرض المواد منخفضة المخزون</a>
+    </div>
+    @endif
+
     @if ($errors->any())
         <div class="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300" role="alert">
             <ul class="list-inside list-disc space-y-1">
@@ -83,6 +91,7 @@
                             <th class="px-5 py-3">الوحدة</th>
                             <th class="px-5 py-3">الموقع / الرف</th>
                             <th class="px-5 py-3">سعر البيع</th>
+                            <th class="px-5 py-3">المخزون الحالي</th>
                             <th class="px-5 py-3">الحد الأدنى</th>
                             <th class="px-5 py-3">الحالة</th>
                             <th class="px-5 py-3 text-left">الإجراءات</th>
@@ -98,6 +107,16 @@
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->unit }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 text-slate-600 dark:text-slate-300">{{ $product->location ?: '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ $product->price_sale_custom !== null ? number_format((float) $product->price_sale_custom, 2).' '.$currency : '—' }}</td>
+                                @php
+                                    $currentStock = (float) ($product->total_in_qty ?? 0) - (float) ($product->total_out_qty ?? 0);
+                                    $isLowStock = $product->is_active && $product->stock_min !== null && $currentStock <= (float) $product->stock_min;
+                                @endphp
+                                <td class="whitespace-nowrap px-5 py-4 tabular-nums {{ $isLowStock ? 'font-semibold text-amber-700 dark:text-amber-300' : 'text-slate-600 dark:text-slate-300' }}">
+                                    {{ rtrim(rtrim(number_format($currentStock, 3, '.', ''), '0'), '.') }}
+                                    @if ($isLowStock)
+                                        <span class="mr-1 rounded-full bg-amber-100 px-2 py-1 text-xs dark:bg-amber-900/50">منخفض</span>
+                                    @endif
+                                </td>
                                 <td class="whitespace-nowrap px-5 py-4 tabular-nums text-slate-600 dark:text-slate-300">{{ $product->stock_min !== null ? rtrim(rtrim(number_format((float) $product->stock_min, 3, '.', ''), '0'), '.') : '—' }}</td>
                                 <td class="whitespace-nowrap px-5 py-4">
                                     <span @class([

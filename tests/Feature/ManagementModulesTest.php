@@ -445,3 +445,131 @@ test('invoice filters and queued PDF reports use the same company-scoped criteri
         ->assertHeader('Content-Disposition', 'inline; filename="invoice-501.pdf"');
     $this->assertStringStartsWith('%PDF', $invoice->getContent());
 });
+
+test('sales returns link to the original invoice, prorate its discount, and restore stock', function () {
+    $product = Product::withoutGlobalScopes()->create([
+        'company_id' => $this->company->id,
+        'name' => 'صندوق مرتجع البيع',
+        'unit' => 'قطعة',
+        'is_active' => true,
+    ]);
+
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'date' => today()->toDateString(),
+        'discount_value' => 0,
+        'currency' => 'USD',
+        'items' => [['product_id' => $product->id, 'quantity' => 10, 'price_unit' => 5]],
+    ])->assertRedirect();
+
+    $this->post(route('movements.store'), [
+        'type' => 'sale',
+        'date' => today()->toDateString(),
+        'discount_type' => 'percentage',
+        'discount_value' => 10,
+        'currency' => 'USD',
+        'items' => [['product_id' => $product->id, 'quantity' => 4, 'price_unit' => 20]],
+    ])->assertRedirect();
+
+    $sale = Movement::query()->where('type', 'sale')->firstOrFail();
+    $saleItem = $sale->items()->firstOrFail();
+    $this->get(route('movements.returns.create', $sale))
+        ->assertOk()
+        ->assertSee('الكمية المتبقية من الفاتورة الأصلية');
+
+    $this->post(route('movements.returns.store', $sale), [
+        'date' => today()->toDateString(),
+        'status' => 'confirmed',
+        'items' => [['source_item_id' => $saleItem->id, 'quantity' => 1]],
+    ])->assertRedirect();
+
+    $return = Movement::query()->where('related_movement_id', $sale->id)->firstOrFail();
+    expect($return->type)->toBe('sale_return')
+        ->and($return->status)->toBe('confirmed')
+        ->and((float) $return->total)->toBe(18.0)
+        ->and((float) $return->discount_amount)->toBe(2.0)
+        ->and($return->items()->firstOrFail()->related_movement_item_id)->toBe($saleItem->id);
+
+    $stock = Operation::query()->where('product_id', $product->id)
+        ->selectRaw('SUM(in_qty) - SUM(out_qty) as stock')
+        ->value('stock');
+    expect((float) $stock)->toBe(7.0);
+
+    $this->from(route('movements.returns.create', $sale))
+        ->post(route('movements.returns.store', $sale), [
+            'date' => today()->toDateString(),
+            'items' => [['source_item_id' => $saleItem->id, 'quantity' => 4]],
+        ])
+        ->assertSessionHasErrors('items');
+    expect(Movement::query()->where('related_movement_id', $sale->id)->count())->toBe(1);
+});
+
+test('purchase return drafts only reduce stock when confirmed and cannot return more than available stock', function () {
+    $product = Product::withoutGlobalScopes()->create([
+        'company_id' => $this->company->id,
+        'name' => 'صندوق مرتجع الشراء',
+        'unit' => 'قطعة',
+        'is_active' => true,
+    ]);
+    $supplier = Partie::query()->create([
+        'company_id' => $this->company->id,
+        'name' => 'مورد المرتجع',
+        'type' => 'supplier',
+        'is_active' => true,
+    ]);
+
+    $this->post(route('movements.store'), [
+        'type' => 'purchase',
+        'party_id' => $supplier->id,
+        'date' => today()->toDateString(),
+        'discount_value' => 0,
+        'currency' => 'USD',
+        'items' => [['product_id' => $product->id, 'quantity' => 5, 'price_unit' => 4]],
+    ])->assertRedirect();
+
+    $purchase = Movement::query()->where('type', 'purchase')->firstOrFail();
+    $purchaseItem = $purchase->items()->firstOrFail();
+    $this->post(route('movements.returns.store', $purchase), [
+        'date' => today()->toDateString(),
+        'status' => 'draft',
+        'items' => [['source_item_id' => $purchaseItem->id, 'quantity' => 2]],
+    ])->assertRedirect();
+
+    $draft = Movement::query()->where('related_movement_id', $purchase->id)->firstOrFail();
+    $this->post(route('movements.returns.store', $purchase), [
+        'date' => today()->toDateString(),
+        'status' => 'draft',
+        'items' => [['source_item_id' => $purchaseItem->id, 'quantity' => 4]],
+    ])->assertRedirect();
+    $excessDraft = Movement::query()->where('related_movement_id', $purchase->id)->latest('id')->firstOrFail();
+
+    expect($draft->type)->toBe('purchase_return')
+        ->and($draft->status)->toBe('draft')
+        ->and((float) Operation::query()->where('product_id', $product->id)->sum('in_qty'))->toBe(5.0);
+
+    $this->post(route('movements.confirm', $draft))->assertRedirect();
+    expect($draft->fresh()->status)->toBe('confirmed')
+        ->and((float) Operation::query()->where('product_id', $product->id)->sum('out_qty'))->toBe(2.0);
+
+    $this->from(route('movements.show', $excessDraft))
+        ->post(route('movements.confirm', $excessDraft))
+        ->assertSessionHasErrors('items');
+    expect($excessDraft->fresh()->status)->toBe('draft');
+
+    $this->post(route('movements.store'), [
+        'type' => 'sale',
+        'date' => today()->toDateString(),
+        'discount_value' => 0,
+        'currency' => 'USD',
+        'items' => [['product_id' => $product->id, 'quantity' => 2, 'price_unit' => 8]],
+    ])->assertRedirect();
+
+    $this->from(route('movements.returns.create', $purchase))
+        ->post(route('movements.returns.store', $purchase), [
+            'date' => today()->toDateString(),
+            'items' => [['source_item_id' => $purchaseItem->id, 'quantity' => 2]],
+        ])
+        ->assertSessionHasErrors('items');
+    expect(Movement::query()->where('related_movement_id', $purchase->id)->count())->toBe(2)
+        ->and((float) Operation::query()->where('product_id', $product->id)->sum('in_qty') - Operation::query()->where('product_id', $product->id)->sum('out_qty'))->toBe(1.0);
+});

@@ -16,6 +16,11 @@
         </div>
         <div class="flex flex-wrap gap-2">
             <a href="{{ route('movements.pdf', $movement) }}" class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700">تصدير PDF</a>
+            @if ($movement->relatedMovement)
+                <a href="{{ route('movements.show', $movement->relatedMovement) }}" class="rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 dark:border-indigo-900 dark:bg-slate-900 dark:text-indigo-300">الفاتورة الأصلية #{{ $movement->relatedMovement->number }}</a>
+            @elseif ($canCreateReturn)
+                <a href="{{ route('movements.returns.create', $movement) }}" class="rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-semibold text-amber-700 dark:border-amber-900 dark:bg-slate-900 dark:text-amber-300">إنشاء مرتجع</a>
+            @endif
             @if ($movement->status === 'draft')
                 <form method="POST" action="{{ route('movements.confirm', $movement) }}">
                     @csrf
@@ -57,4 +62,21 @@
             <div class="flex justify-between border-t border-slate-200 pt-3 font-bold text-slate-900 dark:border-slate-700 dark:text-white"><span>الصافي المستحق</span><span class="tabular-nums">{{ number_format((float) $movement->total, 2) }} {{ $currency }}</span></div>
         </div>
     </section>
+
+    @if ($movement->returns->isNotEmpty())
+        <section class="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+                <h2 class="font-bold text-slate-900 dark:text-white">المرتجعات المرتبطة بهذه الفاتورة</h2>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                @foreach ($movement->returns as $return)
+                    <a href="{{ route('movements.show', $return) }}" class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-sm hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                        <span class="font-semibold text-slate-900 dark:text-white">مرتجع #{{ $return->number }}</span>
+                        <span class="text-slate-500 dark:text-slate-400">{{ $return->date?->format('Y-m-d') }} · {{ $return->status === 'confirmed' ? 'مؤكد' : 'مسودة' }}</span>
+                        <span class="font-semibold text-slate-900 dark:text-white">{{ number_format((float) $return->total, 2) }} {{ $return->currency }}</span>
+                    </a>
+                @endforeach
+            </div>
+        </section>
+    @endif
 @endsection

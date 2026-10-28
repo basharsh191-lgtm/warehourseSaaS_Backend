@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Categorie;
+use App\Models\Operation;
 use App\Models\Product;
 use App\Services\ProductImportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Rap2hpoutre\FastExcel\FastExcel;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -15,16 +17,45 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $products = Product::query()
+        $company = $request->user()->company;
+        $stockTotals = Operation::query()
+            ->select('product_id', DB::raw('SUM(in_qty) - SUM(out_qty) as stock'))
+            ->where('company_id', $company->id)
+            ->groupBy('product_id');
+        $lowStockCount = $company->products()
+            ->where('products.is_active', true)
+            ->whereNotNull('products.stock_min')
+            ->leftJoinSub($stockTotals, 'inventory_totals', function ($join) {
+                $join->on('products.id', '=', 'inventory_totals.product_id');
+            })
+            ->whereRaw('COALESCE(inventory_totals.stock, 0) <= products.stock_min')
+            ->count();
+
+        $productsQuery = Product::query()
             ->with('category')
-            ->latest()
-            ->paginate(15);
+            ->withSum('operations as total_in_qty', 'in_qty')
+            ->withSum('operations as total_out_qty', 'out_qty');
+
+        if ($request->boolean('low_stock')) {
+            $productsQuery
+                ->where('products.is_active', true)
+                ->whereNotNull('products.stock_min')
+                ->whereRaw(
+                    '(SELECT COALESCE(SUM(operations.in_qty) - SUM(operations.out_qty), 0)
+                    FROM operations
+                    WHERE operations.product_id = products.id
+                    AND operations.company_id = products.company_id) <= products.stock_min'
+                );
+        }
+
+        $products = $productsQuery->latest()->paginate(15)->withQueryString();
 
         return view('products.index', [
             'products' => $products,
-            'currency' => auth()->user()->company->currency,
+            'currency' => $company->currency,
+            'lowStockCount' => $lowStockCount,
         ]);
     }
 

@@ -100,6 +100,8 @@ Route::middleware(['auth', 'subscription', 'company.admin'])->group(function () 
     Route::post('/movements', [MovementController::class, 'store'])->name('movements.store');
     Route::post('/movements/export/pdf', [MovementController::class, 'exportPdf'])->name('movements.export.pdf');
     Route::get('/movements/export/excel', [MovementController::class, 'exportExcel'])->name('movements.export.excel');
+    Route::get('/movements/{movement}/returns/create', [MovementController::class, 'createReturn'])->whereNumber('movement')->name('movements.returns.create');
+    Route::post('/movements/{movement}/returns', [MovementController::class, 'storeReturn'])->whereNumber('movement')->name('movements.returns.store');
     Route::get('/movements/{movement}/pdf', [MovementController::class, 'exportInvoicePdf'])->whereNumber('movement')->name('movements.pdf');
     Route::post('/movements/{movement}/confirm', [MovementController::class, 'confirmDraft'])->whereNumber('movement')->name('movements.confirm');
     Route::get('/movements/{movement}', [MovementController::class, 'show'])->whereNumber('movement')->name('movements.show');

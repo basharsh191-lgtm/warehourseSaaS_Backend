@@ -260,13 +260,137 @@ class MovementController extends Controller
         return redirect()->route('movements.show', $movement)->with('success', $message);
     }
 
+    public function createReturn(Request $request, int $movement): View
+    {
+        $original = $request->user()->company->movements()
+            ->with(['items.product', 'items.operations', 'returns.items.operations'])
+            ->findOrFail($movement);
+
+        abort_unless(
+            $original->status === 'confirmed' && in_array($original->type, ['sale', 'purchase'], true),
+            404
+        );
+
+        return view('movements.returns.create', [
+            'original' => $original,
+            'returnableItems' => $this->returnableItems($original),
+            'returnType' => $original->type === 'sale' ? 'sale_return' : 'purchase_return',
+        ]);
+    }
+
+    public function storeReturn(Request $request, int $movement): RedirectResponse
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+            'status' => ['sometimes', Rule::in(['confirmed', 'draft'])],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.source_item_id' => ['required', 'integer'],
+            'items.*.quantity' => ['nullable', 'numeric', 'min:0', 'max:999999999.999'],
+        ]);
+
+        $company = $request->user()->company;
+        $return = DB::transaction(function () use ($company, $movement, $validated) {
+            Companie::query()->whereKey($company->id)->lockForUpdate()->firstOrFail();
+            $original = $company->movements()
+                ->whereKey($movement)
+                ->lockForUpdate()
+                ->with(['items.product', 'items.operations', 'returns.items.operations'])
+                ->firstOrFail();
+
+            abort_unless(
+                $original->status === 'confirmed' && in_array($original->type, ['sale', 'purchase'], true),
+                404
+            );
+
+            if ($original->date && $validated['date'] < $original->date->toDateString()) {
+                throw ValidationException::withMessages([
+                    'date' => 'يجب ألا يسبق تاريخ المرتجع تاريخ الفاتورة الأصلية.',
+                ]);
+            }
+
+            $submittedItems = collect($validated['items'])
+                ->filter(fn (array $item) => (float) ($item['quantity'] ?? 0) > 0)
+                ->map(fn (array $item) => [
+                    'source_item_id' => (int) $item['source_item_id'],
+                    'quantity' => (float) $item['quantity'],
+                ])
+                ->values();
+
+            if ($submittedItems->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'items' => 'أدخل كمية مرتجعة واحدة على الأقل.',
+                ]);
+            }
+
+            $returnableItems = $this->returnableItems($original)->keyBy('id');
+            $returnLines = $this->calculateReturnLines($original, $submittedItems, $returnableItems);
+            $subtotal = round($returnLines->sum('total_line'), 2);
+            $total = round($returnLines->sum('total_net'), 2);
+            $discount = round($subtotal - $total, 2);
+            $returnType = $original->type === 'sale' ? 'sale_return' : 'purchase_return';
+            $returnMovement = $company->movements()->create([
+                'party_id' => $original->party_id,
+                'related_movement_id' => $original->id,
+                'type' => $returnType,
+                'number' => $company->movements()->max('number') + 1,
+                'document_no' => null,
+                'date' => $validated['date'],
+                'status' => $validated['status'] ?? 'confirmed',
+                'currency' => $original->currency,
+                'discount_type' => 'fixed',
+                'discount_value' => $discount,
+                'discount_amount' => $discount,
+                'discount' => $discount,
+                'total' => $total,
+            ]);
+
+            foreach ($returnLines as $line) {
+                MovementItems::query()->create([
+                    'movement_id' => $returnMovement->id,
+                    'related_movement_item_id' => $line['source_item_id'],
+                    'product_id' => $line['product_id'],
+                    'quantity' => $line['quantity'],
+                    'price_unit' => $line['price_unit'],
+                    'item_shape' => $line['item_shape'],
+                    'total_line' => $line['total_line'],
+                    'total_net' => $line['total_net'],
+                ]);
+            }
+
+            if ($returnMovement->status === 'confirmed') {
+                $items = $returnMovement->items()->get();
+                $products = Product::query()
+                    ->whereIn('id', $items->pluck('product_id')->unique())
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                if ($returnType === 'purchase_return') {
+                    $this->ensureSaleStock($company, $items, $products);
+                }
+
+                $this->recordMovementOperations($company, $returnMovement, $items);
+            }
+
+            return $returnMovement;
+        });
+
+        return redirect()->route('movements.show', $return)
+            ->with('success', $return->status === 'draft'
+                ? 'تم حفظ المرتجع كمسودة دون تحديث المخزون.'
+                : 'تم تسجيل المرتجع وتحديث المخزون.');
+    }
+
     public function show(Request $request, int $movement): View
     {
         $movement = $request->user()->company->movements()
-            ->with(['company', 'party', 'items.product'])
+            ->with(['company', 'party', 'items.product', 'relatedMovement', 'returns'])
             ->findOrFail($movement);
+        $canCreateReturn = $movement->status === 'confirmed'
+            && in_array($movement->type, ['sale', 'purchase'], true)
+            && $this->returnableItems($movement)->isNotEmpty();
 
-        return view('movements.show', compact('movement'));
+        return view('movements.show', compact('movement', 'canCreateReturn'));
     }
 
     public function exportInvoicePdf(Request $request, int $movement, MovementPdfService $pdfService): Response
@@ -287,7 +411,7 @@ class MovementController extends Controller
             $draft = $company->movements()
                 ->whereKey($movement)
                 ->lockForUpdate()
-                ->with('items')
+                ->with(['items.relatedMovementItem.operations', 'relatedMovement.items.operations', 'relatedMovement.returns.items.operations'])
                 ->firstOrFail();
 
             if ($draft->status !== 'draft') {
@@ -297,7 +421,9 @@ class MovementController extends Controller
             }
 
             if ($draft->party_id) {
-                $partyType = $draft->type === 'purchase' ? 'supplier' : 'customer';
+                $partyType = in_array($draft->type, ['purchase', 'purchase_return'], true)
+                    ? 'supplier'
+                    : 'customer';
                 $party = $company->parties()->find($draft->party_id);
 
                 if (! $party || $party->type !== $partyType) {
@@ -321,7 +447,43 @@ class MovementController extends Controller
                 ]);
             }
 
-            if ($draft->type === 'sale') {
+            if (in_array($draft->type, ['sale_return', 'purchase_return'], true)) {
+                $original = $draft->relatedMovement;
+                abort_unless(
+                    $original
+                        && $original->status === 'confirmed'
+                        && $original->company_id === $company->id
+                        && $original->type === ($draft->type === 'sale_return' ? 'sale' : 'purchase'),
+                    404
+                );
+
+                $returnLines = $draft->items->map(fn (MovementItems $item) => [
+                    'source_item_id' => (int) $item->related_movement_item_id,
+                    'quantity' => (float) $item->quantity,
+                ]);
+                $calculatedLines = $this->calculateReturnLines(
+                    $original,
+                    $returnLines,
+                    $this->returnableItems($original)->keyBy('id')
+                );
+
+                foreach ($draft->items as $item) {
+                    $calculated = $calculatedLines->firstWhere('source_item_id', $item->related_movement_item_id);
+                    $item->update(['total_net' => $calculated['total_net']]);
+                }
+
+                $subtotal = round($calculatedLines->sum('total_line'), 2);
+                $total = round($calculatedLines->sum('total_net'), 2);
+                $discount = round($subtotal - $total, 2);
+                $draft->update([
+                    'discount' => $discount,
+                    'discount_value' => $discount,
+                    'discount_amount' => $discount,
+                    'total' => $total,
+                ]);
+            }
+
+            if (in_array($draft->type, ['sale', 'purchase_return'], true)) {
                 $this->ensureSaleStock($company, $items, $products);
             }
 
@@ -396,8 +558,9 @@ class MovementController extends Controller
 
         foreach ($requested as $productId => $quantity) {
             if ($quantity > (float) ($stocks[$productId] ?? 0)) {
+                $productName = $products[$productId]->name ?? 'المادة المحددة';
                 throw ValidationException::withMessages([
-                    'items' => "المخزون المتاح من {$products[$productId]->name} غير كافٍ.",
+                    'items' => "المخزون المتاح من {$productName} غير كافٍ.",
                 ]);
             }
         }
@@ -423,12 +586,94 @@ class MovementController extends Controller
                 'party_id' => $movement->party_id,
                 'type' => $movement->type,
                 'date' => $movement->date,
-                'in_qty' => $movement->type === 'purchase' ? $item->quantity : 0,
-                'out_qty' => $movement->type === 'sale' ? $item->quantity : 0,
+                'in_qty' => in_array($movement->type, ['purchase', 'sale_return'], true) ? $item->quantity : 0,
+                'out_qty' => in_array($movement->type, ['sale', 'purchase_return'], true) ? $item->quantity : 0,
                 'price_unit' => $item->price_unit,
                 'value' => $item->total_line,
-                'value_net' => $lineNet,
+                'value_net' => $item->total_net === null ? $lineNet : (float) $item->total_net,
             ]);
         }
+    }
+
+    private function returnableItems(Movement $original): Collection
+    {
+        $sourceItems = $original->items->sortBy('id')->values();
+        $sourceIds = $sourceItems->modelKeys();
+        $returnedItems = MovementItems::query()
+            ->whereIn('related_movement_item_id', $sourceIds)
+            ->whereHas('movement', fn ($query) => $query->where('status', 'confirmed'))
+            ->with('operations')
+            ->get()
+            ->groupBy('related_movement_item_id');
+
+        return $sourceItems->map(function (MovementItems $item, int $index) use ($returnedItems, $sourceItems, $original) {
+            $gross = (float) $item->total_line;
+            $subtotal = round($sourceItems->sum('total_line'), 2);
+            $net = $item->operations->isNotEmpty()
+                ? (float) $item->operations->sum('value_net')
+                : ($subtotal > 0 ? round($gross * (float) $original->total / $subtotal, 2) : 0.0);
+
+            if ($index === $sourceItems->count() - 1 && $item->operations->isEmpty()) {
+                $net = round((float) $original->total - $sourceItems->take($index)->sum(function (MovementItems $previous) use ($subtotal, $original) {
+                    return $subtotal > 0
+                        ? round((float) $previous->total_line * (float) $original->total / $subtotal, 2)
+                        : 0;
+                }), 2);
+            }
+
+            $priorReturns = $returnedItems->get($item->id, collect());
+            $returnedQuantity = (float) $priorReturns->sum('quantity');
+            $returnedNet = (float) $priorReturns->sum(fn (MovementItems $returnItem) => $returnItem->operations->sum('value_net'));
+
+            return [
+                'id' => $item->id,
+                'product' => $item->product,
+                'quantity' => max(0, round((float) $item->quantity - $returnedQuantity, 3)),
+                'price_unit' => (float) $item->price_unit,
+                'item_shape' => $item->item_shape,
+                'net_remaining' => max(0, round($net - $returnedNet, 2)),
+            ];
+        })->filter(fn (array $item) => $item['quantity'] > 0)->values();
+    }
+
+    private function calculateReturnLines(Movement $original, Collection $submittedItems, Collection $returnableItems): Collection
+    {
+        $seen = [];
+
+        return $submittedItems->map(function (array $submitted) use ($original, $returnableItems, &$seen) {
+            $sourceId = $submitted['source_item_id'];
+            if (isset($seen[$sourceId])) {
+                throw ValidationException::withMessages([
+                    'items' => 'لا يمكن تكرار المادة نفسها ضمن أسطر المرتجع.',
+                ]);
+            }
+            $seen[$sourceId] = true;
+
+            $source = $returnableItems->get($sourceId);
+            $quantity = round((float) $submitted['quantity'], 3);
+            if (! $source || $quantity <= 0 || $quantity > $source['quantity']) {
+                throw ValidationException::withMessages([
+                    'items' => 'الكمية المرتجعة تتجاوز الكمية المتبقية في الفاتورة الأصلية.',
+                ]);
+            }
+
+            $sourceItem = $original->items->firstWhere('id', $sourceId);
+            $netAmount = $quantity >= $source['quantity']
+                ? $source['net_remaining']
+                : min(
+                    $source['net_remaining'],
+                    round($source['net_remaining'] * $quantity / $source['quantity'], 2)
+                );
+
+            return [
+                'source_item_id' => $sourceId,
+                'product_id' => $sourceItem->product_id,
+                'quantity' => $quantity,
+                'price_unit' => $source['price_unit'],
+                'item_shape' => $source['item_shape'],
+                'total_line' => round($quantity * $source['price_unit'], 2),
+                'total_net' => $netAmount,
+            ];
+        });
     }
 }

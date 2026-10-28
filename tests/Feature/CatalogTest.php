@@ -2,6 +2,9 @@
 
 use App\Models\Categorie;
 use App\Models\Companie;
+use App\Models\Movement;
+use App\Models\MovementItems;
+use App\Models\Operation;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -192,4 +195,73 @@ test('company administrators cannot access another company product by route bind
     $this->actingAs($this->user)
         ->get(route('products.edit', $foreignProduct))
         ->assertNotFound();
+});
+
+test('products page shows low-stock warning for the current company only', function () {
+    Product::withoutGlobalScopes()->create([
+        'company_id' => $this->company->id,
+        'name' => 'مادة منخفضة المخزون',
+        'unit' => 'قطعة',
+        'stock_min' => 5,
+        'is_active' => true,
+    ]);
+    $healthyProduct = Product::withoutGlobalScopes()->create([
+        'company_id' => $this->company->id,
+        'name' => 'مادة مخزونها كافٍ',
+        'unit' => 'قطعة',
+        'stock_min' => 1,
+        'is_active' => true,
+    ]);
+
+    $otherCompany = Companie::create(['name' => 'شركة خارج النطاق', 'status' => 'active']);
+    Product::withoutGlobalScopes()->create([
+        'company_id' => $otherCompany->id,
+        'name' => 'مادة شركة أخرى',
+        'unit' => 'قطعة',
+        'stock_min' => 5,
+        'is_active' => true,
+    ]);
+
+    $movement = Movement::query()->create([
+        'company_id' => $this->company->id,
+        'type' => 'purchase',
+        'number' => 1,
+        'date' => today(),
+        'status' => 'confirmed',
+        'currency' => 'USD',
+        'total' => 2,
+    ]);
+    $item = MovementItems::query()->create([
+        'movement_id' => $movement->id,
+        'product_id' => $healthyProduct->id,
+        'quantity' => 2,
+        'price_unit' => 1,
+        'total_line' => 2,
+    ]);
+    Operation::query()->create([
+        'company_id' => $this->company->id,
+        'movement_id' => $movement->id,
+        'movement_item_id' => $item->id,
+        'product_id' => $healthyProduct->id,
+        'type' => 'purchase',
+        'date' => today(),
+        'in_qty' => 2,
+        'out_qty' => 0,
+        'price_unit' => 1,
+        'value' => 2,
+        'value_net' => 2,
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('products.index'))
+        ->assertOk()
+        ->assertSee('مواد عند الحد الأدنى أو أقل: 1')
+        ->assertSee('مادة منخفضة المخزون')
+        ->assertSee('منخفض')
+        ->assertDontSee('مادة شركة أخرى');
+
+    $this->get(route('products.index', ['low_stock' => 1]))
+        ->assertOk()
+        ->assertSee('مادة منخفضة المخزون')
+        ->assertDontSee('مادة مخزونها كافٍ');
 });
